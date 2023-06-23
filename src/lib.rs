@@ -1,0 +1,14 @@
+pub const BLACK_PAWN_SYMBOL: &str = "♙";
+pub const WHITE_PAWN_SYMBOL: &str = "♟";
+pub const WHITE_ROOK_SYMBOL: &str = "♜ ";
+pub const BLACK_ROOK_SYMBOL: &str = "♖ ";
+pub const WHITE_KNIGHT_SYMBOL: &str = "♞ ";
+pub const BLACK_KNIGHT_SYMBOL: &str = "♘ ";
+pub const WHITE_BISHOP_SYMBOL: &str = "♝ ";
+pub const BLACK_BISHOP_SYMBOL: &str = "♗ ";
+pub const WHITE_QUEEN_SYMBOL: &str = "♛ ";
+pub const BLACK_QUEEN_SYMBOL: &str = "♕ ";
+pub const WHITE_KING_SYMBOL: &str = "♚ ";
+pub const BLACK_KING_SYMBOL: &str = "♔ ";
+pub const WHITE_TILE: &str = "⬛";
+pub const BLACK_TILE: &str = "⬜";
