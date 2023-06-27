@@ -1,5 +1,5 @@
-pub const BLACK_PAWN_SYMBOL: &str = "♙";
-pub const WHITE_PAWN_SYMBOL: &str = "♟";
+pub const BLACK_PAWN_SYMBOL: &str = "♙ ";
+pub const WHITE_PAWN_SYMBOL: &str = "♟ ";
 pub const WHITE_ROOK_SYMBOL: &str = "♜ ";
 pub const BLACK_ROOK_SYMBOL: &str = "♖ ";
 pub const WHITE_KNIGHT_SYMBOL: &str = "♞ ";
