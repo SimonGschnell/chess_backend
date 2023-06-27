@@ -1,9 +1,10 @@
 use std::{
+    cell::{Cell, Ref, RefCell},
     error::Error,
     fmt::Display,
     ops::Add,
     str::FromStr,
-    sync::{Arc, Mutex},
+    sync::{Arc, Mutex, MutexGuard},
 };
 
 #[derive(Debug)]
@@ -41,40 +42,57 @@ impl FromStr for Position {
 
 #[derive(Clone)]
 pub struct Board {
-    board: Arc<Mutex<Vec<Vec<Tile>>>>,
+    board: Arc<Mutex<Vec<Vec<RefCell<Tile>>>>>,
 }
+
 impl Board {
-    pub fn move_piece(&mut self, start: &Position, end: &Position) -> Option<()> {
+    pub fn move_piece(&self, start: &Position, end: &Position) {
+        let lock = self.board.lock().unwrap();
         let piece = self
             .take_piece_from_position(start)
             .expect("no piece was found in tile");
-        self.add_piece_to_tile(end, piece.clone());
-        Some(())
+
+        let mut tile = self.get_tile(end, &lock).borrow_mut();
+        tile.add_piece(piece);
     }
-    fn add_piece_to_tile(&mut self, pos: &Position, piece: GameObject) -> Option<GameObject> {
-        self.board
-            .lock()
-            .unwrap()
-            .get_mut(convert_rank_to_index(pos.rank))?
-            .get_mut(convert_file_to_index(pos.file))?
-            .add_piece(piece.clone());
-        Some(piece)
+    pub fn is_piece_in_position(&self, pos: Position) -> bool {
+        true
     }
-    fn take_piece_from_position(&mut self, pos: &Position) -> Option<GameObject> {
+    fn get_tile<'a>(
+        &self,
+        pos: &Position,
+        lock: &'a MutexGuard<Vec<Vec<RefCell<Tile>>>>,
+    ) -> &'a RefCell<Tile> {
+        let (rank, file) = convert_position_to_index(pos);
+
+        lock.get(rank).unwrap().get(file).unwrap()
+
+        /* .add_piece(piece.clone());
+        Some(piece) */
+    }
+
+    fn take_piece_from_position(&self, pos: &Position) -> Option<GameObject> {
+        let (rank, file) = convert_position_to_index(pos);
         let piece = self
             .board
             .lock()
             .unwrap()
-            .get_mut(convert_rank_to_index(pos.rank))?
-            .get_mut(convert_file_to_index(pos.file))?
+            .get_mut(rank)?
+            .get_mut(file)?
+            .get_mut()
             .piece
             .take()?;
         Some(piece)
     }
 }
 
-fn convert_file_to_index(file: char) -> usize {
-    match file {
+fn convert_position_to_index(pos: &Position) -> (usize, usize) {
+    let rank = match pos.rank {
+        num @ 1..=8 => (num - 1) as usize,
+
+        _ => panic!("rank was not allowed"),
+    };
+    let file = match pos.file {
         'a' => 0,
         'b' => 1,
         'c' => 2,
@@ -84,14 +102,8 @@ fn convert_file_to_index(file: char) -> usize {
         'g' => 6,
         'h' => 7,
         _ => panic!("file was not allowed"),
-    }
-}
-fn convert_rank_to_index(rank: u8) -> usize {
-    match rank {
-        num @ 1..=8 => (num - 1) as usize,
-
-        _ => panic!("rank was not allowed"),
-    }
+    };
+    (rank, file)
 }
 impl Display for Board {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -102,7 +114,10 @@ impl Display for Board {
         }
         f.write_str("\n");
         for row in &*self.board.lock().unwrap() {
-            let r = row.iter().map(|item| item.symbol()).collect::<Vec<&str>>();
+            let r = row
+                .iter()
+                .map(|item| item.borrow_mut().symbol())
+                .collect::<Vec<&str>>();
             f.write_str(&ranks.next().unwrap().to_string().add(" "));
             for i in &r {
                 f.write_str(i);
@@ -353,8 +368,8 @@ pub fn create_game() -> Board {
         Box::new(BlackKnight {}),
         Box::new(BlackRook {}),
     ]; */
-    let mut black_start: Vec<Tile> = Vec::with_capacity(8);
-    let mut white_start: Vec<Tile> = Vec::with_capacity(8);
+    let mut black_start: Vec<RefCell<Tile>> = Vec::with_capacity(8);
+    let mut white_start: Vec<RefCell<Tile>> = Vec::with_capacity(8);
 
     for i in 0..8 {
         if i % 2 == 0 {
@@ -368,16 +383,18 @@ pub fn create_game() -> Board {
     let black_pawns = black_start
         .clone()
         .into_iter()
-        .map(|mut tile| {
-            tile.add_piece(GameObject::Pawn(Pawn::new(Color::Black)));
+        .map(|tile| {
+            tile.borrow_mut()
+                .add_piece(GameObject::Pawn(Pawn::new(Color::Black)));
             tile
         })
         .collect();
     let white_pawns = white_start
         .clone()
         .into_iter()
-        .map(|mut tile| {
-            tile.add_piece(GameObject::Pawn(Pawn::new(Color::White)));
+        .map(|tile| {
+            tile.borrow_mut()
+                .add_piece(GameObject::Pawn(Pawn::new(Color::White)));
             tile
         })
         .collect();
@@ -432,47 +449,13 @@ impl Tile {
             Color::Black => chess_backend::BLACK_TILE,
         }
     }
-    fn new(piece: Option<GameObject>, color: Color) -> Self {
-        Tile { piece, color }
+    fn new(piece: Option<GameObject>, color: Color) -> RefCell<Self> {
+        RefCell::new(Tile { piece, color })
     }
     fn add_piece(&mut self, piece: GameObject) {
-        self.piece = Some(piece); /*
-                                      if self.piece.is_none() {
-                                  } else {
-                                      println!(
-                                          "tried to put piece {} in {}",
-                                          piece.symbol(),
-                                          self.piece.clone().unwrap().symbol()
-                                      );
-                                  } */
+        self.piece = Some(piece);
     }
 }
-/* #[derive(Clone)]
-struct BlackTile {
-    piece: Option<GameObject>,
-}
-impl BlackTile {
-    fn symbol(&self) -> &'static str {
-        chess_backend::BLACK_TILE
-    }
-    fn new(piece: Option<GameObject>) -> Self {
-        BlackTile { piece: piece }
-    }
-} */
-/* #[derive(Clone, Debug)]
-struct WhitePawn {
-    movement: u16,
-}
-impl WhitePawn {
-    fn new() -> Self {
-        WhitePawn { movement: 1 }
-    }
-}
-impl Piece for WhitePawn {
-    fn symbol(&self) -> &'static str {
-        chess_backend::WHITE_PAWN_SYMBOL
-    }
-} */
 
 #[derive(Clone, Debug)]
 struct Pawn {
@@ -488,6 +471,57 @@ impl Pawn {
             movement: 2,
             color,
         }
+    }
+    fn get_pawn_movement(&self, pos: Position, range: u8) -> Vec<Position> {
+        //? pawn moves differently based on its color
+        //? for the moment its adapted for white pawns going down the rank
+        let mut positions = Vec::new();
+        //todo CHANGE BOUND TO 8 AFTER INCLUDING OTHER PIECES
+        let rank_bound_max = 6;
+        let rank_bound_min = 1;
+
+        let files = pos.file..='h';
+        let mut files = files.skip(1);
+        let rev_files = 'a'..=pos.file;
+        let mut rev_files = rev_files.rev().skip(1);
+        for i in 1..=range {
+            let rank = pos.rank - i;
+            if rank >= rank_bound_min {
+                positions.push(Position {
+                    file: pos.file,
+                    rank,
+                })
+            }
+        }
+        let mut rank = 0;
+        if let Color::Black = self.color {
+            if pos.rank - 1 >= rank_bound_min {
+                rank = pos.rank - 1;
+            }
+        } else {
+            if pos.rank + 1 <= rank_bound_max {
+                rank = pos.rank + 1;
+            }
+        }
+        if rank > 0 {
+            if let Some(positive_file) = files.next() {
+                //? only if piece is in this Position{}
+
+                positions.push(Position {
+                    file: positive_file,
+                    rank: rank,
+                })
+            }
+            if let Some(negative_file) = rev_files.next() {
+                //? only if piece is in this Position{}
+                positions.push(Position {
+                    file: negative_file,
+                    rank: rank,
+                })
+            }
+        }
+
+        positions
     }
     fn mov(&mut self) {
         self.did_move = true;
