@@ -39,17 +39,17 @@ impl FromStr for Position {
         Err(())
     }
 }
-
+type Matrix = Vec<Vec<RefCell<Tile>>>;
 #[derive(Clone)]
 pub struct Board {
-    board: Arc<Mutex<Vec<Vec<RefCell<Tile>>>>>,
+    board: Arc<Mutex<Matrix>>,
 }
 
 impl Board {
     pub fn move_piece(&self, start: &Position, end: &Position) {
         let lock = self.board.lock().unwrap();
         let piece = self
-            .take_piece_from_position(start)
+            .take_piece_from_position(start, &lock)
             .expect("no piece was found in tile");
 
         let mut tile = self.get_tile(end, &lock).borrow_mut();
@@ -58,11 +58,7 @@ impl Board {
     pub fn is_piece_in_position(&self, pos: Position) -> bool {
         true
     }
-    fn get_tile<'a>(
-        &self,
-        pos: &Position,
-        lock: &'a MutexGuard<Vec<Vec<RefCell<Tile>>>>,
-    ) -> &'a RefCell<Tile> {
+    fn get_tile<'a>(&self, pos: &Position, lock: &'a MutexGuard<Matrix>) -> &'a RefCell<Tile> {
         let (rank, file) = convert_position_to_index(pos);
 
         lock.get(rank).unwrap().get(file).unwrap()
@@ -71,17 +67,13 @@ impl Board {
         Some(piece) */
     }
 
-    fn take_piece_from_position(&self, pos: &Position) -> Option<GameObject> {
+    fn take_piece_from_position<'a>(
+        &self,
+        pos: &Position,
+        lock: &'a MutexGuard<Matrix>,
+    ) -> Option<GameObject> {
         let (rank, file) = convert_position_to_index(pos);
-        let piece = self
-            .board
-            .lock()
-            .unwrap()
-            .get_mut(rank)?
-            .get_mut(file)?
-            .get_mut()
-            .piece
-            .take()?;
+        let piece = lock.get(rank)?.get(file)?.borrow_mut().piece.take()?;
         Some(piece)
     }
 }
