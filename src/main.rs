@@ -24,39 +24,49 @@ async fn main() {
     println!("7 ♟ ♟ ♟ ♟ ♟ ♟ ♟ ♟");
     println!("8 ♜ ♞ ♝ ♛ ♚ ♝ ♞ ♜\n");
     */
-    let b = models::create_game();
+    let db = models::create_game();
 
     //println!("⬛:{}", UnicodeWidthChar::width('⬛').unwrap());
     //println!("♟:{}", UnicodeWidthChar::width('♟').unwrap());
 
     let route = warp::path("print")
-        .and(with_db(b.clone()))
+        .and(with_db(db.clone()))
         .map(|board: Board| {
             println!("{}", board);
             board.to_string()
         });
 
-    let asd = warp::get().and(
+    let move_path = warp::get().and(
         warp::path!("move" / Position / Position)
-            .and(with_db(b.clone()))
+            .and(with_db(db.clone()))
             .map(|start: Position, end: Position, db: Board| {
                 println!("start:{:?} - end:{:?} ", start, end);
-                let mut a = db;
-                a.move_piece(&start, &end);
-                println!("{}", a);
-                format!("{:?} - {:?}", start, end)
+
+                if let Err(error_message) = db.move_piece(&start, &end) {
+                    return error_message;
+                }
+
+                println!("{}", db);
+                format!("{:?} - {:?}\n{}", start, end, db)
             }),
     );
-    //? printing to board for debugging
-    println!("{}", b);
 
-    /* let horse = get_pawn_movement(Position::new('b', 6), 2);
+    let show_move = warp::get().and(warp::path!("show" / Position).and(with_db(db.clone())).map(
+        |pos: Position, db: Board| {
+            let positions = db.show_moves_of_tile(pos);
+            format!("{:?}", positions)
+        },
+    ));
+    //? printing to board for debugging
+    println!("{}", db);
+
+    let horse = get_pawn_movement(Position::new('a', 4), 1);
     println!("{:?}", horse.len());
     for i in horse {
         println!("{:?}", i);
-    } */
+    }
     //? serve
-    warp::serve(asd.or(route).with(warp::log("chess")))
+    warp::serve(move_path.or(route.or(show_move)).with(warp::log("chess")))
         .run(([127, 0, 0, 1], 3030))
         .await;
 }
