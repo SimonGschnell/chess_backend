@@ -53,12 +53,13 @@ async fn main() {
 
     let show_move = warp::get().and(warp::path!("show" / Position).and(with_db(db.clone())).map(
         |pos: Position, db: Board| {
-            let positions = db.show_moves_of_tile(pos);
+            db.print_with_marked(&pos);
+            let positions = db.show_moves_of_tile(&pos);
             format!("{:?}", positions)
         },
     ));
     //? printing to board for debugging
-    println!("{}", db);
+    db.print_with_marked(&Position::new_from_index(5, 0));
 
     let horse = get_pawn_movement(Position::new('a', 4), 1);
     println!("{:?}", horse.len());

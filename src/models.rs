@@ -17,6 +17,25 @@ impl Position {
     pub fn new(file: char, rank: u8) -> Self {
         Position { file, rank }
     }
+
+    pub fn new_from_index(row: usize, col: usize) -> Self {
+        let file = match col {
+            0 => 'a',
+            1 => 'b',
+            2 => 'c',
+            3 => 'd',
+            4 => 'e',
+            5 => 'f',
+            6 => 'g',
+            7 => 'h',
+
+            _ => 'x',
+        };
+        Position {
+            file,
+            rank: (row + 1) as u8,
+        }
+    }
 }
 
 impl FromStr for Position {
@@ -54,7 +73,7 @@ impl Board {
             .piece
             .as_mut()
             .expect("No piece found in start position")
-            .get_moves(start);
+            .get_moves(start, self, &lock);
 
         if moves.contains(end) {
             let mut tile = self.get_tile(end, &lock).borrow_mut();
@@ -72,12 +91,26 @@ impl Board {
         }
     }
 
-    pub fn show_moves_of_tile(&self, pos: Position) -> Vec<Position> {
-        let (rank, file) = convert_position_to_index(&pos);
+    fn is_piece_in_position<'a>(
+        &self,
+        pos: &Position,
+        lock: &'a MutexGuard<Matrix>,
+    ) -> Option<(Color)> {
+        let tile = self.get_tile(pos, &lock);
+        let mut res = None;
+        if let Some(piece) = tile.borrow().piece.as_ref() {
+            res = Some(piece.get_color());
+        } else {
+            res = None;
+        }
+        res
+    }
 
-        self.board
-            .lock()
-            .unwrap()
+    pub fn show_moves_of_tile(&self, pos: &Position) -> Vec<Position> {
+        let (rank, file) = convert_position_to_index(&pos);
+        let lock = self.board.lock().unwrap();
+
+        let moves = lock
             .get(rank)
             .unwrap()
             .get(file)
@@ -86,11 +119,27 @@ impl Board {
             .piece
             .as_mut()
             .unwrap()
-            .get_moves(&pos)
+            .get_moves(&pos, self, &lock);
+        moves
     }
 
     pub fn print_with_marked(&self, pos: &Position) {
-        //todo implement
+        //?aquire lock
+        println!("{}-{}", pos.file, pos.rank);
+
+        let marked = self.show_moves_of_tile(pos);
+        let lock = self.board.lock().unwrap();
+        for i in 0..=5 {
+            for j in 0..=7 {
+                let pos = Position::new_from_index(i, j);
+                if marked.contains(&pos) {
+                    print!("x ");
+                } else {
+                    print!("{}", self.get_tile(&pos, &lock).borrow().symbol());
+                }
+            }
+            println!("");
+        }
     }
 
     fn get_tile<'a>(&self, pos: &Position, lock: &'a MutexGuard<Matrix>) -> &'a RefCell<Tile> {
@@ -425,7 +474,13 @@ pub fn create_game() -> Board {
 
 trait Piece {
     fn symbol(&self) -> &'static str;
-    fn get_moves(&mut self, pos: &Position) -> Vec<Position>;
+    fn get_moves<'a>(
+        &mut self,
+        pos: &Position,
+        db: &Board,
+        lock: &'a MutexGuard<Matrix>,
+    ) -> Vec<Position>;
+    fn get_color(&self) -> Color;
 }
 
 //fn symbol(&self) -> &'static str;
@@ -440,14 +495,24 @@ impl Piece for GameObject {
             GameObject::Pawn(val) => val.symbol(),
         }
     }
-    fn get_moves(&mut self, pos: &Position) -> Vec<Position> {
+    fn get_moves<'a>(
+        &mut self,
+        pos: &Position,
+        db: &Board,
+        lock: &'a MutexGuard<Matrix>,
+    ) -> Vec<Position> {
         match self {
-            GameObject::Pawn(val) => val.get_moves(pos),
+            GameObject::Pawn(val) => val.get_moves(pos, db, lock),
+        }
+    }
+    fn get_color(&self) -> Color {
+        match self {
+            GameObject::Pawn(val) => val.get_color(),
         }
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 enum Color {
     White,
     Black,
@@ -493,7 +558,12 @@ impl Pawn {
         }
     }
 
-    fn get_pawn_movement(&mut self, pos: &Position) -> Vec<Position> {
+    fn get_pawn_movement<'a>(
+        &mut self,
+        pos: &Position,
+        db: &Board,
+        lock: &'a MutexGuard<Matrix>,
+    ) -> Vec<Position> {
         let range = self.range;
         if !self.did_move {
             self.did_move = true;
@@ -509,7 +579,7 @@ impl Pawn {
         let mut files = files.skip(1);
         let rev_files = 'a'..=pos.file;
         let mut rev_files = rev_files.rev().skip(1);
-        let a = match self.color {
+        match self.color {
             Color::Black => {
                 for i in 1..=range {
                     let rank = pos.rank - i;
@@ -523,19 +593,26 @@ impl Pawn {
                 let rank = pos.rank - 1;
                 if rank >= rank_bound_min {
                     if let Some(positive_file) = files.next() {
-                        //? only if piece is in this Position{}
-
-                        positions.push(Position {
+                        let p = Position {
                             file: positive_file,
                             rank: rank,
-                        })
+                        };
+                        if let Some(color) = db.is_piece_in_position(&p, lock) {
+                            if self.color != color {
+                                positions.push(p);
+                            }
+                        }
                     }
                     if let Some(negative_file) = rev_files.next() {
-                        //? only if piece is in this Position{}
-                        positions.push(Position {
+                        let p = Position {
                             file: negative_file,
                             rank: rank,
-                        })
+                        };
+                        if let Some(color) = db.is_piece_in_position(&p, lock) {
+                            if self.color != color {
+                                positions.push(p);
+                            }
+                        }
                     }
                 }
             }
@@ -552,23 +629,30 @@ impl Pawn {
                 let rank = pos.rank + 1;
                 if rank <= rank_bound_max {
                     if let Some(positive_file) = files.next() {
-                        //? only if piece is in this Position{}
-
-                        positions.push(Position {
+                        let p = Position {
                             file: positive_file,
                             rank: rank,
-                        })
+                        };
+                        if let Some(color) = db.is_piece_in_position(&p, lock) {
+                            if self.color != color {
+                                positions.push(p);
+                            }
+                        }
                     }
                     if let Some(negative_file) = rev_files.next() {
-                        //? only if piece is in this Position{}
-                        positions.push(Position {
+                        let p = Position {
                             file: negative_file,
                             rank: rank,
-                        })
+                        };
+                        if let Some(color) = db.is_piece_in_position(&p, lock) {
+                            if self.color != color {
+                                positions.push(p);
+                            }
+                        }
                     }
                 }
             }
-        };
+        }
 
         positions
     }
@@ -580,8 +664,16 @@ impl Piece for Pawn {
         }
         chess_backend::WHITE_PAWN_SYMBOL
     }
-    fn get_moves(&mut self, pos: &Position) -> Vec<Position> {
-        self.get_pawn_movement(pos)
+    fn get_moves<'a>(
+        &mut self,
+        pos: &Position,
+        db: &Board,
+        lock: &'a MutexGuard<Matrix>,
+    ) -> Vec<Position> {
+        self.get_pawn_movement(pos, db, lock)
+    }
+    fn get_color(&self) -> Color {
+        self.color.clone()
     }
 }
 /*
