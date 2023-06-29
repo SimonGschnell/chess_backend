@@ -77,12 +77,16 @@ impl Board {
 
         if moves.contains(end) {
             let mut tile = self.get_tile(end, &lock).borrow_mut();
-            let piece = self
+            let mut piece = self
                 .get_tile(start, &lock)
                 .borrow_mut()
                 .piece
                 .take()
                 .unwrap();
+
+            if let GameObject::Pawn(pawn) = &mut piece {
+                pawn.did_move = true;
+            }
 
             tile.add_piece(piece);
             Ok(())
@@ -129,11 +133,17 @@ impl Board {
 
         let marked = self.show_moves_of_tile(pos);
         let lock = self.board.lock().unwrap();
+        println!("  A B C D E F G H ");
         for i in 0..=5 {
+            print!("{} ", i + 1);
             for j in 0..=7 {
                 let pos = Position::new_from_index(i, j);
                 if marked.contains(&pos) {
-                    print!("x ");
+                    if self.is_piece_in_position(&pos, &lock).is_some() {
+                        print!("🞩 ");
+                    } else {
+                        print!("🟢");
+                    }
                 } else {
                     print!("{}", self.get_tile(&pos, &lock).borrow().symbol());
                 }
@@ -564,11 +574,11 @@ impl Pawn {
         db: &Board,
         lock: &'a MutexGuard<Matrix>,
     ) -> Vec<Position> {
-        let range = self.range;
-        if !self.did_move {
-            self.did_move = true;
+        if self.did_move {
             self.range = 1;
         }
+        let range = self.range;
+
         //? pawn moves differently based on its color
         let mut positions = Vec::new();
         //todo CHANGE BOUND TO 8 AFTER INCLUDING OTHER PIECES
@@ -584,10 +594,13 @@ impl Pawn {
                 for i in 1..=range {
                     let rank = pos.rank - i;
                     if rank >= rank_bound_min {
-                        positions.push(Position {
+                        let p = Position {
                             file: pos.file,
                             rank,
-                        })
+                        };
+                        if let None = db.is_piece_in_position(&p, lock) {
+                            positions.push(p);
+                        }
                     }
                 }
                 let rank = pos.rank - 1;
@@ -620,10 +633,13 @@ impl Pawn {
                 for i in 1..=range {
                     let rank = pos.rank + i;
                     if rank <= rank_bound_max {
-                        positions.push(Position {
+                        let p = Position {
                             file: pos.file,
                             rank,
-                        })
+                        };
+                        if let None = db.is_piece_in_position(&p, lock) {
+                            positions.push(p);
+                        }
                     }
                 }
                 let rank = pos.rank + 1;

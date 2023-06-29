@@ -50,6 +50,11 @@ async fn main() {
                 format!("{:?} - {:?}\n{}", start, end, db)
             }),
     );
+    let arr = 1..6;
+    let b: Vec<()> = arr
+        .enumerate()
+        .map(|(i, c)| println!("{}={}", i, c))
+        .collect();
 
     let show_move = warp::get().and(warp::path!("show" / Position).and(with_db(db.clone())).map(
         |pos: Position, db: Board| {
@@ -61,11 +66,6 @@ async fn main() {
     //? printing to board for debugging
     db.print_with_marked(&Position::new_from_index(5, 0));
 
-    let horse = get_pawn_movement(Position::new('a', 4), 1);
-    println!("{:?}", horse.len());
-    for i in horse {
-        println!("{:?}", i);
-    }
     //? serve
     warp::serve(move_path.or(route.or(show_move)).with(warp::log("chess")))
         .run(([127, 0, 0, 1], 3030))
