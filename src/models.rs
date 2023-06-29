@@ -1,4 +1,5 @@
 use std::{
+    borrow::BorrowMut,
     cell::{Cell, Ref, RefCell},
     error::Error,
     fmt::Display,
@@ -114,17 +115,11 @@ impl Board {
         let (rank, file) = convert_position_to_index(&pos);
         let lock = self.board.lock().unwrap();
 
-        let moves = lock
-            .get(rank)
-            .unwrap()
-            .get(file)
-            .unwrap()
-            .borrow_mut()
-            .piece
-            .as_mut()
-            .unwrap()
-            .get_moves(&pos, self, &lock);
-        moves
+        let mut tile = lock.get(rank).unwrap().get(file).unwrap().borrow_mut();
+        match tile.piece.borrow_mut() {
+            Some(piece) => piece.get_moves(&pos, self, &lock),
+            None => Vec::with_capacity(0),
+        }
     }
 
     pub fn print_with_marked(&self, pos: &Position) {
@@ -591,6 +586,7 @@ impl Pawn {
         let mut rev_files = rev_files.rev().skip(1);
         match self.color {
             Color::Black => {
+                let mut foreward = Vec::new();
                 for i in 1..=range {
                     let rank = pos.rank - i;
                     if rank >= rank_bound_min {
@@ -598,8 +594,16 @@ impl Pawn {
                             file: pos.file,
                             rank,
                         };
-                        if let None = db.is_piece_in_position(&p, lock) {
-                            positions.push(p);
+                        foreward.push(p);
+                    }
+                }
+                if let Some(first) = foreward.get(0) {
+                    if let None = db.is_piece_in_position(first, lock) {
+                        positions.push(first.clone());
+                        if let Some(second) = foreward.get(1) {
+                            if let None = db.is_piece_in_position(second, lock) {
+                                positions.push(second.clone());
+                            }
                         }
                     }
                 }
@@ -630,6 +634,7 @@ impl Pawn {
                 }
             }
             Color::White => {
+                let mut foreward = Vec::new();
                 for i in 1..=range {
                     let rank = pos.rank + i;
                     if rank <= rank_bound_max {
@@ -637,11 +642,22 @@ impl Pawn {
                             file: pos.file,
                             rank,
                         };
-                        if let None = db.is_piece_in_position(&p, lock) {
-                            positions.push(p);
+                        foreward.push(p);
+                    }
+                }
+                //? check if a piece stands in front of a pawn
+
+                if let Some(first) = foreward.get(0) {
+                    if let None = db.is_piece_in_position(first, lock) {
+                        positions.push(first.clone());
+                        if let Some(second) = foreward.get(1) {
+                            if let None = db.is_piece_in_position(second, lock) {
+                                positions.push(second.clone());
+                            }
                         }
                     }
                 }
+
                 let rank = pos.rank + 1;
                 if rank <= rank_bound_max {
                     if let Some(positive_file) = files.next() {
