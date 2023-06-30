@@ -1,6 +1,6 @@
 mod models;
 use log::{info, warn};
-use models::{get_diagonals, get_horse, get_orthogonals, get_pawn_movement, Board, Position};
+use models::{Board, Position};
 
 use unicode_width::UnicodeWidthChar;
 use warp::Filter;
@@ -64,7 +64,7 @@ async fn main() {
         },
     ));
     //? printing to board for debugging
-    db.print_with_marked(&Position::new_from_index(5, 0));
+    db.print_with_marked(&Position::new_from_index(0, 0));
 
     //? serve
     warp::serve(move_path.or(route.or(show_move)).with(warp::log("chess")))

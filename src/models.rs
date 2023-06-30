@@ -100,7 +100,7 @@ impl Board {
         &self,
         pos: &Position,
         lock: &'a MutexGuard<Matrix>,
-    ) -> Option<(Color)> {
+    ) -> Option<Color> {
         let tile = self.get_tile(pos, &lock);
         let mut res = None;
         if let Some(piece) = tile.borrow().piece.as_ref() {
@@ -109,6 +109,18 @@ impl Board {
             res = None;
         }
         res
+    }
+
+    fn is_piece_in_position_of_same_color<'a>(
+        &self,
+        pos: &Position,
+        color: &Color,
+        lock: &'a MutexGuard<Matrix>,
+    ) -> bool {
+        match self.is_piece_in_position(pos, lock) {
+            Some(piece_color) => piece_color == color.clone(),
+            None => false,
+        }
     }
 
     pub fn show_moves_of_tile(&self, pos: &Position) -> Vec<Position> {
@@ -123,7 +135,6 @@ impl Board {
     }
 
     pub fn print_with_marked(&self, pos: &Position) {
-        //?aquire lock
         println!("{}-{}", pos.file, pos.rank);
 
         let marked = self.show_moves_of_tile(pos);
@@ -239,130 +250,6 @@ pub fn get_pawn_movement(pos: Position, range: u8) -> Vec<Position> {
     positions
 }
 
-pub fn get_horse(pos: Position) -> Vec<Position> {
-    let mut positions = Vec::new();
-    //todo CHANGE BOUND TO 8 AFTER INCLUDING OTHER PIECES
-    let rank_bound_max = 6;
-    let rank_bound_min = 1;
-
-    let files = pos.file..='h';
-    let mut files = files.skip(1);
-    let rev_files = 'a'..=pos.file;
-    let mut rev_files = rev_files.rev().skip(1);
-
-    let highest_rank = pos.rank + 2;
-    let lowest_rank = pos.rank - 2;
-
-    if let Some(positive_file) = files.next() {
-        if highest_rank <= rank_bound_max {
-            positions.push(Position {
-                file: positive_file,
-                rank: highest_rank,
-            });
-        }
-        if lowest_rank >= rank_bound_min {
-            positions.push(Position {
-                file: positive_file,
-                rank: lowest_rank,
-            });
-        }
-    }
-
-    if let Some(negative_file) = rev_files.next() {
-        if highest_rank <= rank_bound_max {
-            positions.push(Position {
-                file: negative_file,
-                rank: highest_rank,
-            });
-        }
-        if lowest_rank >= rank_bound_min {
-            positions.push(Position {
-                file: negative_file,
-                rank: lowest_rank,
-            });
-        }
-    }
-    let highest_rank = pos.rank + 1;
-    let lowest_rank = pos.rank - 1;
-    if let Some(highest_file) = files.next() {
-        if lowest_rank >= rank_bound_min {
-            positions.push(Position {
-                file: highest_file,
-                rank: lowest_rank,
-            });
-        }
-        if highest_rank <= rank_bound_max {
-            positions.push(Position {
-                file: highest_file,
-                rank: highest_rank,
-            });
-        }
-    }
-
-    if let Some(lowest_file) = rev_files.next() {
-        if lowest_rank >= rank_bound_min {
-            positions.push(Position {
-                file: lowest_file,
-                rank: lowest_rank,
-            });
-        }
-        if highest_rank <= rank_bound_max {
-            positions.push(Position {
-                file: lowest_file,
-                rank: highest_rank,
-            });
-        }
-    }
-
-    positions
-}
-
-pub fn get_orthogonals(pos: Position, range: u8) -> Vec<Position> {
-    //*example orthogonals of b6
-    //*diagonals if range =1 are
-    //? b5 & a6 & 6c
-
-    let mut positions = Vec::new();
-    //todo CHANGE BOUND TO 8 AFTER INCLUDING OTHER PIECES
-    let rank_bound_max = 6;
-    let rank_bound_min = 1;
-
-    let files = pos.file..='h';
-    let mut files = files.skip(1);
-    let rev_files = 'a'..=pos.file;
-    let mut rev_files = rev_files.rev().skip(1);
-    for i in 1..=range {
-        //?same rank
-        if let Some(positive_file) = files.next() {
-            positions.push(Position {
-                file: positive_file,
-                rank: pos.rank,
-            })
-        }
-        if let Some(negative_file) = rev_files.next() {
-            positions.push(Position {
-                file: negative_file,
-                rank: pos.rank,
-            })
-        }
-        //?same file
-        let positive_rank = pos.rank + i;
-        let negative_rank = pos.rank - i;
-        if positive_rank <= rank_bound_max {
-            positions.push(Position {
-                file: pos.file,
-                rank: positive_rank,
-            })
-        }
-        if negative_rank >= rank_bound_min {
-            positions.push(Position {
-                file: pos.file,
-                rank: negative_rank,
-            })
-        }
-    }
-    positions
-}
 pub fn get_diagonals(pos: Position, range: u8) -> Vec<Position> {
     //*example diagonals of b6
     //*diagonals if range =1 are
@@ -462,7 +349,7 @@ pub fn create_game() -> Board {
         .into_iter()
         .map(|tile| {
             tile.borrow_mut()
-                .add_piece(GameObject::Pawn(Pawn::new(Color::White)));
+                .add_piece(GameObject::Rook(Rook::new(Color::White)));
             tile
         })
         .collect();
@@ -492,12 +379,14 @@ trait Piece {
 #[derive(Clone, Debug)]
 enum GameObject {
     Pawn(Pawn),
+    Rook(Rook),
 }
 
 impl Piece for GameObject {
     fn symbol(&self) -> &'static str {
         match self {
             GameObject::Pawn(val) => val.symbol(),
+            GameObject::Rook(val) => val.symbol(),
         }
     }
     fn get_moves<'a>(
@@ -508,17 +397,19 @@ impl Piece for GameObject {
     ) -> Vec<Position> {
         match self {
             GameObject::Pawn(val) => val.get_moves(pos, db, lock),
+            GameObject::Rook(val) => val.get_moves(pos, db, lock),
         }
     }
     fn get_color(&self) -> Color {
         match self {
             GameObject::Pawn(val) => val.get_color(),
+            GameObject::Rook(val) => val.get_color(),
         }
     }
 }
 
 #[derive(Clone, Debug, PartialEq)]
-enum Color {
+pub enum Color {
     White,
     Black,
 }
@@ -547,187 +438,13 @@ impl Tile {
     }
 }
 
-#[derive(Clone, Debug)]
-struct Pawn {
-    did_move: bool,
-    range: u8,
-    color: Color,
-}
+//? implementation of pieces
+mod pieces;
+use pieces::{Knight, Pawn, Rook};
 
-impl Pawn {
-    fn new(color: Color) -> Self {
-        Pawn {
-            did_move: false,
-            range: 2,
-            color,
-        }
-    }
-
-    fn get_pawn_movement<'a>(
-        &mut self,
-        pos: &Position,
-        db: &Board,
-        lock: &'a MutexGuard<Matrix>,
-    ) -> Vec<Position> {
-        if self.did_move {
-            self.range = 1;
-        }
-        let range = self.range;
-
-        //? pawn moves differently based on its color
-        let mut positions = Vec::new();
-        //todo CHANGE BOUND TO 8 AFTER INCLUDING OTHER PIECES
-        let rank_bound_max = 6;
-        let rank_bound_min = 1;
-
-        let files = pos.file..='h';
-        let mut files = files.skip(1);
-        let rev_files = 'a'..=pos.file;
-        let mut rev_files = rev_files.rev().skip(1);
-        match self.color {
-            Color::Black => {
-                let mut foreward = Vec::new();
-                for i in 1..=range {
-                    let rank = pos.rank - i;
-                    if rank >= rank_bound_min {
-                        let p = Position {
-                            file: pos.file,
-                            rank,
-                        };
-                        foreward.push(p);
-                    }
-                }
-                if let Some(first) = foreward.get(0) {
-                    if let None = db.is_piece_in_position(first, lock) {
-                        positions.push(first.clone());
-                        if let Some(second) = foreward.get(1) {
-                            if let None = db.is_piece_in_position(second, lock) {
-                                positions.push(second.clone());
-                            }
-                        }
-                    }
-                }
-                let rank = pos.rank - 1;
-                if rank >= rank_bound_min {
-                    if let Some(positive_file) = files.next() {
-                        let p = Position {
-                            file: positive_file,
-                            rank: rank,
-                        };
-                        if let Some(color) = db.is_piece_in_position(&p, lock) {
-                            if self.color != color {
-                                positions.push(p);
-                            }
-                        }
-                    }
-                    if let Some(negative_file) = rev_files.next() {
-                        let p = Position {
-                            file: negative_file,
-                            rank: rank,
-                        };
-                        if let Some(color) = db.is_piece_in_position(&p, lock) {
-                            if self.color != color {
-                                positions.push(p);
-                            }
-                        }
-                    }
-                }
-            }
-            Color::White => {
-                let mut foreward = Vec::new();
-                for i in 1..=range {
-                    let rank = pos.rank + i;
-                    if rank <= rank_bound_max {
-                        let p = Position {
-                            file: pos.file,
-                            rank,
-                        };
-                        foreward.push(p);
-                    }
-                }
-                //? check if a piece stands in front of a pawn
-
-                if let Some(first) = foreward.get(0) {
-                    if let None = db.is_piece_in_position(first, lock) {
-                        positions.push(first.clone());
-                        if let Some(second) = foreward.get(1) {
-                            if let None = db.is_piece_in_position(second, lock) {
-                                positions.push(second.clone());
-                            }
-                        }
-                    }
-                }
-
-                let rank = pos.rank + 1;
-                if rank <= rank_bound_max {
-                    if let Some(positive_file) = files.next() {
-                        let p = Position {
-                            file: positive_file,
-                            rank: rank,
-                        };
-                        if let Some(color) = db.is_piece_in_position(&p, lock) {
-                            if self.color != color {
-                                positions.push(p);
-                            }
-                        }
-                    }
-                    if let Some(negative_file) = rev_files.next() {
-                        let p = Position {
-                            file: negative_file,
-                            rank: rank,
-                        };
-                        if let Some(color) = db.is_piece_in_position(&p, lock) {
-                            if self.color != color {
-                                positions.push(p);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        positions
-    }
-}
-impl Piece for Pawn {
-    fn symbol(&self) -> &'static str {
-        if let Color::Black = self.color {
-            return chess_backend::BLACK_PAWN_SYMBOL;
-        }
-        chess_backend::WHITE_PAWN_SYMBOL
-    }
-    fn get_moves<'a>(
-        &mut self,
-        pos: &Position,
-        db: &Board,
-        lock: &'a MutexGuard<Matrix>,
-    ) -> Vec<Position> {
-        self.get_pawn_movement(pos, db, lock)
-    }
-    fn get_color(&self) -> Color {
-        self.color.clone()
-    }
-}
 /*
-struct BlackRook {}
-impl Piece for BlackRook {
-    fn symbol(&self) -> &'static str {
-        chess_backend::BLACK_ROOK_SYMBOL
-    }
-}
 
-struct WhiteRook {}
-impl Piece for WhiteRook {
-    fn symbol(&self) -> &'static str {
-        chess_backend::WHITE_ROOK_SYMBOL
-    }
-}
-struct BlackKnight {}
-impl Piece for BlackKnight {
-    fn symbol(&self) -> &'static str {
-        chess_backend::BLACK_KNIGHT_SYMBOL
-    }
-}
+
 struct WhiteKnight {}
 impl Piece for WhiteKnight {
     fn symbol(&self) -> &'static str {
