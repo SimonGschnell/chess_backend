@@ -46,7 +46,6 @@ impl Piece for Pawn {
         let mut rev_files = rev_files.rev().skip(1);
         match self.color {
             Color::Black => {
-                let mut foreward = Vec::new();
                 for i in 1..=range {
                     let rank = pos.rank - i;
                     if rank >= rank_bound_min {
@@ -54,19 +53,13 @@ impl Piece for Pawn {
                             file: pos.file,
                             rank,
                         };
-                        foreward.push(p);
-                    }
-                }
-                if let Some(first) = foreward.get(0) {
-                    if let None = db.is_piece_in_position(first, lock) {
-                        positions.push(first.clone());
-                        if let Some(second) = foreward.get(1) {
-                            if let None = db.is_piece_in_position(second, lock) {
-                                positions.push(second.clone());
-                            }
+                        match db.is_piece_in_position(&p, lock) {
+                            None => positions.push(p),
+                            Some(_) => break,
                         }
                     }
                 }
+
                 let rank = pos.rank - 1;
                 if rank >= rank_bound_min {
                     if let Some(positive_file) = files.next() {
@@ -94,7 +87,6 @@ impl Piece for Pawn {
                 }
             }
             Color::White => {
-                let mut foreward = Vec::new();
                 for i in 1..=range {
                     let rank = pos.rank + i;
                     if rank <= rank_bound_max {
@@ -102,18 +94,9 @@ impl Piece for Pawn {
                             file: pos.file,
                             rank,
                         };
-                        foreward.push(p);
-                    }
-                }
-                //? check if a piece stands in front of a pawn
-
-                if let Some(first) = foreward.get(0) {
-                    if let None = db.is_piece_in_position(first, lock) {
-                        positions.push(first.clone());
-                        if let Some(second) = foreward.get(1) {
-                            if let None = db.is_piece_in_position(second, lock) {
-                                positions.push(second.clone());
-                            }
+                        match db.is_piece_in_position(&p, lock) {
+                            None => positions.push(p),
+                            Some(_) => break,
                         }
                     }
                 }
