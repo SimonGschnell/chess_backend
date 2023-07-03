@@ -250,57 +250,6 @@ pub fn get_pawn_movement(pos: Position, range: u8) -> Vec<Position> {
     positions
 }
 
-pub fn get_diagonals(pos: Position, range: u8) -> Vec<Position> {
-    //*example diagonals of b6
-    //*diagonals if range =1 are
-    //? a5 & c5
-
-    let mut positions: Vec<Position> = Vec::new();
-    //todo CHANGE BOUND TO 8 AFTER INCLUDING OTHER PIECES
-    let rank_bound_max = 6;
-    let rank_bound_min = 1;
-
-    let files = pos.file..='h';
-    let mut files = files.skip(1);
-    let rev_files = 'a'..=pos.file;
-    let mut rev_files = rev_files.rev().skip(1);
-    for i in 1..=range {
-        let positive_rank = pos.rank + i;
-        let negative_rank = pos.rank - i;
-
-        if let Some(positive_file) = files.next() {
-            if negative_rank >= rank_bound_min {
-                positions.push(Position {
-                    file: positive_file,
-                    rank: negative_rank,
-                });
-            }
-            if positive_rank <= rank_bound_max {
-                positions.push(Position {
-                    file: positive_file,
-                    rank: positive_rank,
-                });
-            }
-            if let Some(negative_file) = rev_files.next() {
-                if positive_rank <= rank_bound_max {
-                    positions.push(Position {
-                        file: negative_file,
-                        rank: positive_rank,
-                    });
-                }
-                if negative_rank >= rank_bound_min {
-                    positions.push(Position {
-                        file: negative_file,
-                        rank: negative_rank,
-                    });
-                };
-            }
-        };
-    }
-
-    positions
-}
-
 pub fn create_game() -> Board {
     let mut rows = Vec::with_capacity(8);
     /* let mut white_row: Vec<Box<dyn Piece>> = vec![
@@ -344,7 +293,7 @@ pub fn create_game() -> Board {
             tile
         })
         .collect();
-    let white_pawns = black_start
+    let mut white_pawns: Vec<RefCell<Tile>> = black_start
         .clone()
         .into_iter()
         .map(|tile| {
@@ -353,6 +302,10 @@ pub fn create_game() -> Board {
             tile
         })
         .collect();
+    white_pawns[0] = Tile::new(
+        Some(GameObject::Bishop(Bishop::new(Color::White))),
+        Color::Black,
+    );
     rows.push(white_pawns);
     rows.push(white_start.clone());
     rows.push(black_start.clone());
@@ -380,6 +333,8 @@ trait Piece {
 enum GameObject {
     Pawn(Pawn),
     Rook(Rook),
+    Knight(Knight),
+    Bishop(Bishop),
 }
 
 impl Piece for GameObject {
@@ -387,6 +342,8 @@ impl Piece for GameObject {
         match self {
             GameObject::Pawn(val) => val.symbol(),
             GameObject::Rook(val) => val.symbol(),
+            GameObject::Knight(val) => val.symbol(),
+            GameObject::Bishop(val) => val.symbol(),
         }
     }
     fn get_moves<'a>(
@@ -398,12 +355,16 @@ impl Piece for GameObject {
         match self {
             GameObject::Pawn(val) => val.get_moves(pos, db, lock),
             GameObject::Rook(val) => val.get_moves(pos, db, lock),
+            GameObject::Knight(val) => val.get_moves(pos, db, lock),
+            GameObject::Bishop(val) => val.get_moves(pos, db, lock),
         }
     }
     fn get_color(&self) -> Color {
         match self {
             GameObject::Pawn(val) => val.get_color(),
             GameObject::Rook(val) => val.get_color(),
+            GameObject::Knight(val) => val.get_color(),
+            GameObject::Bishop(val) => val.get_color(),
         }
     }
 }
@@ -440,24 +401,13 @@ impl Tile {
 
 //? implementation of pieces
 mod pieces;
-use pieces::{Knight, Pawn, Rook};
+use pieces::{Bishop, Knight, Pawn, Rook};
 
 /*
 
 
-struct WhiteKnight {}
-impl Piece for WhiteKnight {
-    fn symbol(&self) -> &'static str {
-        chess_backend::WHITE_KNIGHT_SYMBOL
-    }
-}
 
-struct BlackBishop {}
-impl Piece for BlackBishop {
-    fn symbol(&self) -> &'static str {
-        chess_backend::BLACK_BISHOP_SYMBOL
-    }
-}
+
 struct WhiteBishop {}
 impl Piece for WhiteBishop {
     fn symbol(&self) -> &'static str {
