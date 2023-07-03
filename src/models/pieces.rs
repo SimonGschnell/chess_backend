@@ -488,3 +488,166 @@ impl Piece for Bishop {
         positions
     }
 }
+
+#[derive(Debug, Clone)]
+pub struct Queen {
+    range: u8,
+    color: Color,
+}
+
+impl Queen {
+    pub fn new(color: Color) -> Self {
+        Queen { range: 8, color }
+    }
+}
+impl Piece for Queen {
+    fn symbol(&self) -> &'static str {
+        match self.color {
+            Color::Black => chess_backend::BLACK_QUEEN_SYMBOL,
+            Color::White => chess_backend::WHITE_QUEEN_SYMBOL,
+        }
+    }
+    fn get_color(&self) -> Color {
+        self.color.clone()
+    }
+    fn get_moves<'a>(
+        &mut self,
+        pos: &Position,
+        db: &Board,
+        lock: &'a MutexGuard<Matrix>,
+    ) -> Vec<Position> {
+        let range = self.range;
+
+        let mut positions = Vec::new();
+        //todo CHANGE BOUND TO 8 AFTER INCLUDING OTHER PIECES
+        let rank_bound_max = 6;
+        let rank_bound_min = 1;
+
+        let files = pos.file..='h';
+        let mut files = files.skip(1);
+        let rev_files = 'a'..=pos.file;
+        let mut rev_files = rev_files.rev().skip(1);
+        let (mut diag_top, mut horizontal_right, mut diag_bot) = (true, true, true);
+        for i in 1..=range {
+            //?same rank
+
+            if let Some(positive_file) = files.next() {
+                let higher_rank = if i > pos.rank { 0 } else { pos.rank - i };
+                let lower_rank = pos.rank + i;
+                let p_hor = Position {
+                    file: positive_file,
+                    rank: pos.rank,
+                };
+                let p_diag_top = Position {
+                    file: positive_file,
+                    rank: higher_rank,
+                };
+                let p_diag_bot = Position {
+                    file: positive_file,
+                    rank: lower_rank,
+                };
+
+                if db.is_piece_in_position_of_same_color(&p_hor, &self.color, lock) {
+                    horizontal_right = false;
+                }
+                if lower_rank <= rank_bound_max
+                    && db.is_piece_in_position_of_same_color(&p_diag_bot, &self.color, lock)
+                {
+                    diag_bot = false;
+                }
+                if higher_rank >= rank_bound_min
+                    && db.is_piece_in_position_of_same_color(&p_diag_top, &self.color, lock)
+                {
+                    diag_top = false;
+                }
+                if horizontal_right {
+                    positions.push(p_hor);
+                }
+                if diag_top && higher_rank >= rank_bound_min {
+                    positions.push(p_diag_top);
+                }
+                if diag_bot && lower_rank <= rank_bound_max {
+                    positions.push(p_diag_bot);
+                }
+            }
+        }
+        let (mut diag_top, mut horizontal_left, mut diag_bot) = (true, true, true);
+
+        for i in 1..=range {
+            let higher_rank = if i > pos.rank { 0 } else { pos.rank - i };
+            let lower_rank = pos.rank + i;
+
+            if let Some(negative_file) = rev_files.next() {
+                let p_hor = Position {
+                    file: negative_file,
+                    rank: pos.rank,
+                };
+                let p_diag_top = Position {
+                    file: negative_file,
+                    rank: higher_rank,
+                };
+                let p_diag_bot = Position {
+                    file: negative_file,
+                    rank: lower_rank,
+                };
+
+                if db.is_piece_in_position_of_same_color(&p_hor, &self.color, lock) {
+                    horizontal_left = false;
+                }
+                if lower_rank <= rank_bound_max
+                    && db.is_piece_in_position_of_same_color(&p_diag_bot, &self.color, lock)
+                {
+                    diag_bot = false;
+                }
+                if higher_rank >= rank_bound_min
+                    && db.is_piece_in_position_of_same_color(&p_diag_top, &self.color, lock)
+                {
+                    diag_top = false;
+                }
+                if horizontal_right {
+                    positions.push(p_hor);
+                }
+                if diag_top && higher_rank >= rank_bound_min {
+                    positions.push(p_diag_top);
+                }
+                if diag_bot && lower_rank <= rank_bound_max {
+                    positions.push(p_diag_bot);
+                }
+            }
+        }
+        for i in 1..=range {
+            //?same file
+            let positive_rank = pos.rank + i;
+            //?u8 was panicing because it went lower than 0 when subtracting
+            //?temporary fix with i8 conversion
+            if positive_rank <= rank_bound_max {
+                let p = Position {
+                    file: pos.file,
+                    rank: positive_rank,
+                };
+                if db.is_piece_in_position_of_same_color(&p, &self.color, lock) {
+                    break;
+                }
+                positions.push(p);
+            }
+        }
+        for i in 1..=range {
+            let negative_rank: i8 = (pos.rank as i8) - i as i8;
+            if negative_rank >= rank_bound_min as i8 {
+                let p = Position {
+                    file: pos.file,
+                    rank: negative_rank as u8,
+                };
+                if db.is_piece_in_position_of_same_color(&p, &self.color, lock) {
+                    break;
+                }
+                positions.push(p);
+            }
+        }
+
+        positions
+            .into_iter()
+            .filter(|pos| !db.is_piece_in_position_of_same_color(pos, &self.color, lock))
+            .collect()
+    }
+}

@@ -166,6 +166,8 @@ impl Board {
 }
 
 fn convert_position_to_index(pos: &Position) -> (usize, usize) {
+    //todo this function can panic
+
     let rank = match pos.rank {
         num @ 1..=8 => (num - 1) as usize,
 
@@ -184,6 +186,8 @@ fn convert_position_to_index(pos: &Position) -> (usize, usize) {
     };
     (rank, file)
 }
+
+//todo please rewrite
 impl Display for Board {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut ranks = 1..9;
@@ -207,49 +211,6 @@ impl Display for Board {
         Ok(())
     }
 }
-
-pub fn get_pawn_movement(pos: Position, range: u8) -> Vec<Position> {
-    //? pawn moves differently based on its color
-    //? for the moment its adapted for white pawns going down the rank
-    let mut positions = Vec::new();
-    //todo CHANGE BOUND TO 8 AFTER INCLUDING OTHER PIECES
-    let rank_bound_max = 6;
-    let rank_bound_min = 1;
-
-    let files = pos.file..='h';
-    let mut files = files.skip(1);
-    let rev_files = 'a'..=pos.file;
-    let mut rev_files = rev_files.rev().skip(1);
-    for i in 1..=range {
-        let rank = pos.rank - i;
-        if rank >= rank_bound_min {
-            positions.push(Position {
-                file: pos.file,
-                rank,
-            })
-        }
-    }
-    let rank = pos.rank - 1;
-    if rank >= rank_bound_min {
-        if let Some(positive_file) = files.next() {
-            //? only if piece is in this Position{}
-
-            positions.push(Position {
-                file: positive_file,
-                rank: rank,
-            })
-        }
-        if let Some(negative_file) = rev_files.next() {
-            //? only if piece is in this Position{}
-            positions.push(Position {
-                file: negative_file,
-                rank: rank,
-            })
-        }
-    }
-    positions
-}
-
 pub fn create_game() -> Board {
     let mut rows = Vec::with_capacity(8);
     /* let mut white_row: Vec<Box<dyn Piece>> = vec![
@@ -303,7 +264,7 @@ pub fn create_game() -> Board {
         })
         .collect();
     white_pawns[0] = Tile::new(
-        Some(GameObject::Bishop(Bishop::new(Color::White))),
+        Some(GameObject::Queen(Queen::new(Color::White))),
         Color::Black,
     );
     rows.push(white_pawns);
@@ -335,6 +296,7 @@ enum GameObject {
     Rook(Rook),
     Knight(Knight),
     Bishop(Bishop),
+    Queen(Queen),
 }
 
 impl Piece for GameObject {
@@ -344,6 +306,7 @@ impl Piece for GameObject {
             GameObject::Rook(val) => val.symbol(),
             GameObject::Knight(val) => val.symbol(),
             GameObject::Bishop(val) => val.symbol(),
+            GameObject::Queen(val) => val.symbol(),
         }
     }
     fn get_moves<'a>(
@@ -357,6 +320,7 @@ impl Piece for GameObject {
             GameObject::Rook(val) => val.get_moves(pos, db, lock),
             GameObject::Knight(val) => val.get_moves(pos, db, lock),
             GameObject::Bishop(val) => val.get_moves(pos, db, lock),
+            GameObject::Queen(val) => val.get_moves(pos, db, lock),
         }
     }
     fn get_color(&self) -> Color {
@@ -365,6 +329,7 @@ impl Piece for GameObject {
             GameObject::Rook(val) => val.get_color(),
             GameObject::Knight(val) => val.get_color(),
             GameObject::Bishop(val) => val.get_color(),
+            GameObject::Queen(val) => val.get_color(),
         }
     }
 }
@@ -401,25 +366,15 @@ impl Tile {
 
 //? implementation of pieces
 mod pieces;
-use pieces::{Bishop, Knight, Pawn, Rook};
+use pieces::{Bishop, Knight, Pawn, Queen, Rook};
 
 /*
 
 
 
 
-struct WhiteBishop {}
-impl Piece for WhiteBishop {
-    fn symbol(&self) -> &'static str {
-        chess_backend::WHITE_BISHOP_SYMBOL
-    }
-}
-struct BlackQueen {}
-impl Piece for BlackQueen {
-    fn symbol(&self) -> &'static str {
-        chess_backend::BLACK_QUEEN_SYMBOL
-    }
-}
+
+
 struct WhiteQueen {}
 impl Piece for WhiteQueen {
     fn symbol(&self) -> &'static str {

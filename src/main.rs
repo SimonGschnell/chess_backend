@@ -12,22 +12,8 @@ async fn main() {
         std::env::set_var(RUST_LOG, "chess=info");
     }
     pretty_env_logger::init();
-    /* println!("\n  A B C D E F G H");
-    println!("1 ♖ ♘ ♗ ♕ ♔ ♗ ♘ ♖");
-    println!("2 ♙ ♙ ♙ ♙ ♙ ♙ ♙ ♙");
 
-    println!("3 ⬛⬜⬛⬜⬛⬜⬛⬜");
-    println!("4 ⬜⬛⬜⬛⬜⬛⬜⬛");
-    println!("5 ⬛⬜⬛⬜⬛⬜⬛⬜");
-    println!("6 ⬜⬛⬜⬛⬜⬛⬜⬛");
-
-    println!("7 ♟ ♟ ♟ ♟ ♟ ♟ ♟ ♟");
-    println!("8 ♜ ♞ ♝ ♛ ♚ ♝ ♞ ♜\n");
-    */
     let db = models::create_game();
-
-    //println!("⬛:{}", UnicodeWidthChar::width('⬛').unwrap());
-    //println!("♟:{}", UnicodeWidthChar::width('♟').unwrap());
 
     let route = warp::path("print")
         .and(with_db(db.clone()))
@@ -50,11 +36,6 @@ async fn main() {
                 format!("{:?} - {:?}\n{}", start, end, db)
             }),
     );
-    let arr = 1..6;
-    let b: Vec<()> = arr
-        .enumerate()
-        .map(|(i, c)| println!("{}={}", i, c))
-        .collect();
 
     let show_move = warp::get().and(warp::path!("show" / Position).and(with_db(db.clone())).map(
         |pos: Position, db: Board| {
