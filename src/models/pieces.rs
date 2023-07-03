@@ -200,29 +200,35 @@ impl Piece for Rook {
         for _ in 1..=range {
             //?same rank
 
-            if let Some(positive_file) = files.next() {
-                let p = Position {
-                    file: positive_file,
-                    rank: pos.rank,
-                };
+            match files.next() {
+                Some(positive_file) => {
+                    let p = Position {
+                        file: positive_file,
+                        rank: pos.rank,
+                    };
 
-                if db.is_piece_in_position_of_same_color(&p, &self.color, lock) {
-                    break;
+                    if db.is_piece_in_position_of_same_color(&p, &self.color, lock) {
+                        break;
+                    }
+                    positions.push(p);
                 }
-                positions.push(p);
+                None => break,
             }
         }
         for _ in 1..=range {
-            if let Some(negative_file) = rev_files.next() {
-                let p = Position {
-                    file: negative_file,
-                    rank: pos.rank,
-                };
+            match rev_files.next() {
+                Some(negative_file) => {
+                    let p = Position {
+                        file: negative_file,
+                        rank: pos.rank,
+                    };
 
-                if db.is_piece_in_position_of_same_color(&p, &self.color, lock) {
-                    break;
+                    if db.is_piece_in_position_of_same_color(&p, &self.color, lock) {
+                        break;
+                    }
+                    positions.push(p);
                 }
-                positions.push(p);
+                None => break,
             }
         }
         for i in 1..=range {
@@ -414,17 +420,20 @@ impl Piece for Bishop {
         for i in 1..=range {
             let negative_rank = pos.rank as i8 - i as i8;
 
-            if let Some(positive_file) = files.next() {
-                if negative_rank >= rank_bound_min {
-                    let p = Position {
-                        file: positive_file,
-                        rank: negative_rank as u8,
-                    };
-                    if db.is_piece_in_position_of_same_color(&p, &self.color, lock) {
-                        break;
+            match files.next() {
+                Some(positive_file) => {
+                    if negative_rank >= rank_bound_min {
+                        let p = Position {
+                            file: positive_file,
+                            rank: negative_rank as u8,
+                        };
+                        if db.is_piece_in_position_of_same_color(&p, &self.color, lock) {
+                            break;
+                        }
+                        positions.push(p);
                     }
-                    positions.push(p);
                 }
+                None => break,
             }
         }
         let files2 = pos.file..='h';
@@ -433,17 +442,20 @@ impl Piece for Bishop {
         for i in 1..=range {
             let positive_rank = pos.rank + i;
 
-            if let Some(positive_file) = files2.next() {
-                if positive_rank <= rank_bound_max {
-                    let p = Position {
-                        file: positive_file,
-                        rank: positive_rank,
-                    };
-                    if db.is_piece_in_position_of_same_color(&p, &self.color, lock) {
-                        break;
+            match files2.next() {
+                Some(positive_file) => {
+                    if positive_rank <= rank_bound_max {
+                        let p = Position {
+                            file: positive_file,
+                            rank: positive_rank,
+                        };
+                        if db.is_piece_in_position_of_same_color(&p, &self.color, lock) {
+                            break;
+                        }
+                        positions.push(p);
                     }
-                    positions.push(p);
                 }
+                None => break,
             }
         }
 
@@ -452,17 +464,20 @@ impl Piece for Bishop {
 
         for i in 1..=range {
             let positive_rank = pos.rank + i;
-            if let Some(negative_file) = rev_files.next() {
-                if positive_rank <= rank_bound_max {
-                    let p = Position {
-                        file: negative_file,
-                        rank: positive_rank,
-                    };
-                    if db.is_piece_in_position_of_same_color(&p, &self.color, lock) {
-                        break;
+            match rev_files.next() {
+                Some(negative_file) => {
+                    if positive_rank <= rank_bound_max {
+                        let p = Position {
+                            file: negative_file,
+                            rank: positive_rank,
+                        };
+                        if db.is_piece_in_position_of_same_color(&p, &self.color, lock) {
+                            break;
+                        }
+                        positions.push(p);
                     }
-                    positions.push(p);
                 }
+                None => break,
             }
         }
 
@@ -471,17 +486,20 @@ impl Piece for Bishop {
 
         for i in 1..=range {
             let negative_rank = pos.rank as i8 - i as i8;
-            if let Some(negative_file) = rev_files2.next() {
-                if negative_rank >= rank_bound_min {
-                    let p = Position {
-                        file: negative_file,
-                        rank: negative_rank as u8,
+            match rev_files2.next() {
+                Some(negative_file) => {
+                    if negative_rank >= rank_bound_min {
+                        let p = Position {
+                            file: negative_file,
+                            rank: negative_rank as u8,
+                        };
+                        if db.is_piece_in_position_of_same_color(&p, &self.color, lock) {
+                            break;
+                        }
+                        positions.push(p);
                     };
-                    if db.is_piece_in_position_of_same_color(&p, &self.color, lock) {
-                        break;
-                    }
-                    positions.push(p);
-                };
+                }
+                None => break,
             }
         }
 
@@ -531,44 +549,47 @@ impl Piece for Queen {
         for i in 1..=range {
             //?same rank
 
-            if let Some(positive_file) = files.next() {
-                let higher_rank = if i > pos.rank { 0 } else { pos.rank - i };
-                let lower_rank = pos.rank + i;
-                let p_hor = Position {
-                    file: positive_file,
-                    rank: pos.rank,
-                };
-                let p_diag_top = Position {
-                    file: positive_file,
-                    rank: higher_rank,
-                };
-                let p_diag_bot = Position {
-                    file: positive_file,
-                    rank: lower_rank,
-                };
+            match files.next() {
+                Some(positive_file) => {
+                    let higher_rank = if i > pos.rank { 0 } else { pos.rank - i };
+                    let lower_rank = pos.rank + i;
+                    let p_hor = Position {
+                        file: positive_file,
+                        rank: pos.rank,
+                    };
+                    let p_diag_top = Position {
+                        file: positive_file,
+                        rank: higher_rank,
+                    };
+                    let p_diag_bot = Position {
+                        file: positive_file,
+                        rank: lower_rank,
+                    };
 
-                if db.is_piece_in_position_of_same_color(&p_hor, &self.color, lock) {
-                    horizontal_right = false;
+                    if db.is_piece_in_position_of_same_color(&p_hor, &self.color, lock) {
+                        horizontal_right = false;
+                    }
+                    if lower_rank <= rank_bound_max
+                        && db.is_piece_in_position_of_same_color(&p_diag_bot, &self.color, lock)
+                    {
+                        diag_bot = false;
+                    }
+                    if higher_rank >= rank_bound_min
+                        && db.is_piece_in_position_of_same_color(&p_diag_top, &self.color, lock)
+                    {
+                        diag_top = false;
+                    }
+                    if horizontal_right {
+                        positions.push(p_hor);
+                    }
+                    if diag_top && higher_rank >= rank_bound_min {
+                        positions.push(p_diag_top);
+                    }
+                    if diag_bot && lower_rank <= rank_bound_max {
+                        positions.push(p_diag_bot);
+                    }
                 }
-                if lower_rank <= rank_bound_max
-                    && db.is_piece_in_position_of_same_color(&p_diag_bot, &self.color, lock)
-                {
-                    diag_bot = false;
-                }
-                if higher_rank >= rank_bound_min
-                    && db.is_piece_in_position_of_same_color(&p_diag_top, &self.color, lock)
-                {
-                    diag_top = false;
-                }
-                if horizontal_right {
-                    positions.push(p_hor);
-                }
-                if diag_top && higher_rank >= rank_bound_min {
-                    positions.push(p_diag_top);
-                }
-                if diag_bot && lower_rank <= rank_bound_max {
-                    positions.push(p_diag_bot);
-                }
+                None => break,
             }
         }
         let (mut diag_top, mut horizontal_left, mut diag_bot) = (true, true, true);
@@ -577,42 +598,45 @@ impl Piece for Queen {
             let higher_rank = if i > pos.rank { 0 } else { pos.rank - i };
             let lower_rank = pos.rank + i;
 
-            if let Some(negative_file) = rev_files.next() {
-                let p_hor = Position {
-                    file: negative_file,
-                    rank: pos.rank,
-                };
-                let p_diag_top = Position {
-                    file: negative_file,
-                    rank: higher_rank,
-                };
-                let p_diag_bot = Position {
-                    file: negative_file,
-                    rank: lower_rank,
-                };
+            match rev_files.next() {
+                Some(negative_file) => {
+                    let p_hor = Position {
+                        file: negative_file,
+                        rank: pos.rank,
+                    };
+                    let p_diag_top = Position {
+                        file: negative_file,
+                        rank: higher_rank,
+                    };
+                    let p_diag_bot = Position {
+                        file: negative_file,
+                        rank: lower_rank,
+                    };
 
-                if db.is_piece_in_position_of_same_color(&p_hor, &self.color, lock) {
-                    horizontal_left = false;
+                    if db.is_piece_in_position_of_same_color(&p_hor, &self.color, lock) {
+                        horizontal_left = false;
+                    }
+                    if lower_rank <= rank_bound_max
+                        && db.is_piece_in_position_of_same_color(&p_diag_bot, &self.color, lock)
+                    {
+                        diag_bot = false;
+                    }
+                    if higher_rank >= rank_bound_min
+                        && db.is_piece_in_position_of_same_color(&p_diag_top, &self.color, lock)
+                    {
+                        diag_top = false;
+                    }
+                    if horizontal_left {
+                        positions.push(p_hor);
+                    }
+                    if diag_top && higher_rank >= rank_bound_min {
+                        positions.push(p_diag_top);
+                    }
+                    if diag_bot && lower_rank <= rank_bound_max {
+                        positions.push(p_diag_bot);
+                    }
                 }
-                if lower_rank <= rank_bound_max
-                    && db.is_piece_in_position_of_same_color(&p_diag_bot, &self.color, lock)
-                {
-                    diag_bot = false;
-                }
-                if higher_rank >= rank_bound_min
-                    && db.is_piece_in_position_of_same_color(&p_diag_top, &self.color, lock)
-                {
-                    diag_top = false;
-                }
-                if horizontal_right {
-                    positions.push(p_hor);
-                }
-                if diag_top && higher_rank >= rank_bound_min {
-                    positions.push(p_diag_top);
-                }
-                if diag_bot && lower_rank <= rank_bound_max {
-                    positions.push(p_diag_bot);
-                }
+                None => break,
             }
         }
         for i in 1..=range {
@@ -649,5 +673,109 @@ impl Piece for Queen {
             .into_iter()
             .filter(|pos| !db.is_piece_in_position_of_same_color(pos, &self.color, lock))
             .collect()
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct King {
+    range: u8,
+    color: Color,
+}
+impl King {
+    pub fn new(color: Color) -> Self {
+        King { range: 1, color }
+    }
+}
+impl Piece for King {
+    fn symbol(&self) -> &'static str {
+        match self.color {
+            Color::Black => chess_backend::BLACK_KING_SYMBOL,
+            Color::White => chess_backend::WHITE_KING_SYMBOL,
+        }
+    }
+    fn get_color(&self) -> Color {
+        self.color.clone()
+    }
+    fn get_moves<'a>(
+        &mut self,
+        pos: &Position,
+        db: &Board,
+        lock: &'a MutexGuard<Matrix>,
+    ) -> Vec<Position> {
+        let files = pos.file..='h';
+        let mut files = files.skip(1);
+        let rev_files = 'a'..=pos.file;
+        let mut rev_files = rev_files.rev().skip(1);
+        let mut positions = Vec::new();
+        //todo CHANGE BOUNDS TO 8
+        let rank_bound_min = 1;
+        let rank_bound_max = 6;
+        let positive_rank = pos.rank + 1;
+        let negative_rank: i8 = (pos.rank as i8) - 1 as i8;
+        if let Some(positive_file) = files.next() {
+            let (p_hor, diag_top, diag_bot) = (
+                Position {
+                    file: positive_file,
+                    rank: pos.rank,
+                },
+                Position {
+                    file: positive_file,
+                    rank: negative_rank as u8,
+                },
+                Position {
+                    file: positive_file,
+                    rank: positive_rank,
+                },
+            );
+            positions.push(p_hor);
+            if positive_rank <= rank_bound_max {
+                positions.push(diag_bot);
+            }
+            if negative_rank >= rank_bound_min {
+                positions.push(diag_top);
+            }
+        }
+        if let Some(negative_file) = rev_files.next() {
+            let (p_hor, diag_top, diag_bot) = (
+                Position {
+                    file: negative_file,
+                    rank: pos.rank,
+                },
+                Position {
+                    file: negative_file,
+                    rank: negative_rank as u8,
+                },
+                Position {
+                    file: negative_file,
+                    rank: positive_rank,
+                },
+            );
+            positions.push(p_hor);
+            if positive_rank <= rank_bound_max {
+                positions.push(diag_bot);
+            }
+            if negative_rank >= rank_bound_min {
+                positions.push(diag_top);
+            }
+        }
+        if positive_rank <= rank_bound_max {
+            positions.push(Position {
+                file: pos.file,
+                rank: positive_rank,
+            })
+        }
+        if negative_rank >= rank_bound_min {
+            positions.push(Position {
+                file: pos.file,
+                rank: negative_rank as u8,
+            })
+        }
+
+        let positions = positions
+            .into_iter()
+            .filter(|p| !db.is_piece_in_position_of_same_color(&p, &self.color, lock))
+            .collect();
+
+        positions
     }
 }

@@ -213,26 +213,7 @@ impl Display for Board {
 }
 pub fn create_game() -> Board {
     let mut rows = Vec::with_capacity(8);
-    /* let mut white_row: Vec<Box<dyn Piece>> = vec![
-        Box::new(WhiteRook {}),
-        Box::new(WhiteKnight {}),
-        Box::new(WhiteBishop {}),
-        Box::new(WhiteQueen {}),
-        Box::new(WhiteKing {}),
-        Box::new(WhiteBishop {}),
-        Box::new(WhiteKnight {}),
-        Box::new(WhiteRook {}),
-    ]; */
-    /* let mut black_row: Vec<Box<dyn Piece>> = vec![
-        Box::new(BlackRook {}),
-        Box::new(BlackKnight {}),
-        Box::new(BlackBishop {}),
-        Box::new(BlackQueen {}),
-        Box::new(BlackKing {}),
-        Box::new(BlackBishop {}),
-        Box::new(BlackKnight {}),
-        Box::new(BlackRook {}),
-    ]; */
+
     let mut black_start: Vec<RefCell<Tile>> = Vec::with_capacity(8);
     let mut white_start: Vec<RefCell<Tile>> = Vec::with_capacity(8);
 
@@ -267,6 +248,10 @@ pub fn create_game() -> Board {
         Some(GameObject::Queen(Queen::new(Color::White))),
         Color::Black,
     );
+    white_pawns[1] = Tile::new(
+        Some(GameObject::King(King::new(Color::White))),
+        Color::Black,
+    );
     rows.push(white_pawns);
     rows.push(white_start.clone());
     rows.push(black_start.clone());
@@ -297,6 +282,7 @@ enum GameObject {
     Knight(Knight),
     Bishop(Bishop),
     Queen(Queen),
+    King(King),
 }
 
 impl Piece for GameObject {
@@ -307,6 +293,7 @@ impl Piece for GameObject {
             GameObject::Knight(val) => val.symbol(),
             GameObject::Bishop(val) => val.symbol(),
             GameObject::Queen(val) => val.symbol(),
+            GameObject::King(val) => val.symbol(),
         }
     }
     fn get_moves<'a>(
@@ -321,6 +308,7 @@ impl Piece for GameObject {
             GameObject::Knight(val) => val.get_moves(pos, db, lock),
             GameObject::Bishop(val) => val.get_moves(pos, db, lock),
             GameObject::Queen(val) => val.get_moves(pos, db, lock),
+            GameObject::King(val) => val.get_moves(pos, db, lock),
         }
     }
     fn get_color(&self) -> Color {
@@ -330,6 +318,7 @@ impl Piece for GameObject {
             GameObject::Knight(val) => val.get_color(),
             GameObject::Bishop(val) => val.get_color(),
             GameObject::Queen(val) => val.get_color(),
+            GameObject::King(val) => val.get_color(),
         }
     }
 }
@@ -366,31 +355,4 @@ impl Tile {
 
 //? implementation of pieces
 mod pieces;
-use pieces::{Bishop, Knight, Pawn, Queen, Rook};
-
-/*
-
-
-
-
-
-
-struct WhiteQueen {}
-impl Piece for WhiteQueen {
-    fn symbol(&self) -> &'static str {
-        chess_backend::WHITE_QUEEN_SYMBOL
-    }
-}
-struct BlackKing {}
-impl Piece for BlackKing {
-    fn symbol(&self) -> &'static str {
-        chess_backend::BLACK_KING_SYMBOL
-    }
-}
-struct WhiteKing {}
-impl Piece for WhiteKing {
-    fn symbol(&self) -> &'static str {
-        chess_backend::WHITE_KING_SYMBOL
-    }
-}
-*/
+use pieces::{Bishop, King, Knight, Pawn, Queen, Rook};
