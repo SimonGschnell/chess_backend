@@ -1,8 +1,8 @@
 mod models;
-use log::{info, warn};
+// use log::{info, warn};
 use models::{Board, Position};
 
-use unicode_width::UnicodeWidthChar;
+//use unicode_width::UnicodeWidthChar;
 use warp::Filter;
 
 #[tokio::main]
@@ -45,8 +45,8 @@ async fn main() {
         },
     ));
     //? printing to board for debugging
-    db.print_with_marked(&Position::new_from_index(0, 0));
-
+    //db.print_with_marked(&Position::new_from_index(0, 0));
+    println!("{}", db);
     //? serve
     warp::serve(move_path.or(route.or(show_move)).with(warp::log("chess")))
         .run(([127, 0, 0, 1], 3030))
@@ -54,7 +54,9 @@ async fn main() {
 }
 
 //? including with database
-fn with_db(db: Board) -> impl Filter<Extract = (Board,), Error = std::convert::Infallible> + Clone {
+fn with_db<'a>(
+    db: Board,
+) -> impl Filter<Extract = (Board,), Error = std::convert::Infallible> + Clone {
     warp::any().map(move || db.clone())
 }
 

@@ -1,4 +1,8 @@
 use super::*;
+
+const RANK_BOUND_MAX: u8 = 8;
+const RANK_BOUND_MIN: u8 = 1;
+
 #[derive(Clone, Debug)]
 pub struct Pawn {
     pub did_move: bool,
@@ -36,9 +40,6 @@ impl Piece for Pawn {
 
         //? pawn moves differently based on its color
         let mut positions = Vec::new();
-        //todo CHANGE BOUND TO 8 AFTER INCLUDING OTHER PIECES
-        let rank_bound_max = 6;
-        let rank_bound_min = 1;
 
         let files = pos.file..='h';
         let mut files = files.skip(1);
@@ -48,11 +49,8 @@ impl Piece for Pawn {
             Color::Black => {
                 for i in 1..=range {
                     let rank = pos.rank - i;
-                    if rank >= rank_bound_min {
-                        let p = Position {
-                            file: pos.file,
-                            rank,
-                        };
+                    if rank >= RANK_BOUND_MIN {
+                        let p = Position::new(pos.file, rank);
                         match db.is_piece_in_position(&p, lock) {
                             None => positions.push(p),
                             Some(_) => break,
@@ -61,12 +59,9 @@ impl Piece for Pawn {
                 }
 
                 let rank = pos.rank - 1;
-                if rank >= rank_bound_min {
+                if rank >= RANK_BOUND_MIN {
                     if let Some(positive_file) = files.next() {
-                        let p = Position {
-                            file: positive_file,
-                            rank: rank,
-                        };
+                        let p = Position::new(positive_file, rank);
                         if let Some(color) = db.is_piece_in_position(&p, lock) {
                             if self.color != color {
                                 positions.push(p);
@@ -74,10 +69,7 @@ impl Piece for Pawn {
                         }
                     }
                     if let Some(negative_file) = rev_files.next() {
-                        let p = Position {
-                            file: negative_file,
-                            rank: rank,
-                        };
+                        let p = Position::new(negative_file, rank);
                         if let Some(color) = db.is_piece_in_position(&p, lock) {
                             if self.color != color {
                                 positions.push(p);
@@ -89,11 +81,8 @@ impl Piece for Pawn {
             Color::White => {
                 for i in 1..=range {
                     let rank = pos.rank + i;
-                    if rank <= rank_bound_max {
-                        let p = Position {
-                            file: pos.file,
-                            rank,
-                        };
+                    if rank <= RANK_BOUND_MAX {
+                        let p = Position::new(pos.file, rank);
                         match db.is_piece_in_position(&p, lock) {
                             None => positions.push(p),
                             Some(_) => break,
@@ -102,12 +91,9 @@ impl Piece for Pawn {
                 }
 
                 let rank = pos.rank + 1;
-                if rank <= rank_bound_max {
+                if rank <= RANK_BOUND_MAX {
                     if let Some(positive_file) = files.next() {
-                        let p = Position {
-                            file: positive_file,
-                            rank: rank,
-                        };
+                        let p = Position::new(positive_file, rank);
                         if let Some(color) = db.is_piece_in_position(&p, lock) {
                             if self.color != color {
                                 positions.push(p);
@@ -115,10 +101,7 @@ impl Piece for Pawn {
                         }
                     }
                     if let Some(negative_file) = rev_files.next() {
-                        let p = Position {
-                            file: negative_file,
-                            rank: rank,
-                        };
+                        let p = Position::new(negative_file, rank);
                         if let Some(color) = db.is_piece_in_position(&p, lock) {
                             if self.color != color {
                                 positions.push(p);
@@ -133,6 +116,9 @@ impl Piece for Pawn {
     }
     fn get_color(&self) -> Color {
         self.color.clone()
+    }
+    fn set_color(&mut self, color: Color) {
+        self.color = color;
     }
 }
 
@@ -159,6 +145,9 @@ impl Piece for Rook {
     fn get_color(&self) -> Color {
         self.color.clone()
     }
+    fn set_color(&mut self, color: Color) {
+        self.color = color;
+    }
 
     fn get_moves<'a>(
         &mut self,
@@ -172,9 +161,6 @@ impl Piece for Rook {
         //? b5 & a6 & 6c
 
         let mut positions = Vec::new();
-        //todo CHANGE BOUND TO 8 AFTER INCLUDING OTHER PIECES
-        let rank_bound_max = 6;
-        let rank_bound_min = 1;
 
         let files = pos.file..='h';
         let mut files = files.skip(1);
@@ -185,10 +171,7 @@ impl Piece for Rook {
 
             match files.next() {
                 Some(positive_file) => {
-                    let p = Position {
-                        file: positive_file,
-                        rank: pos.rank,
-                    };
+                    let p = Position::new(positive_file, pos.rank);
 
                     if db.is_piece_in_position_of_same_color(&p, &self.color, lock) {
                         break;
@@ -201,10 +184,7 @@ impl Piece for Rook {
         for _ in 1..=range {
             match rev_files.next() {
                 Some(negative_file) => {
-                    let p = Position {
-                        file: negative_file,
-                        rank: pos.rank,
-                    };
+                    let p = Position::new(negative_file, pos.rank);
 
                     if db.is_piece_in_position_of_same_color(&p, &self.color, lock) {
                         break;
@@ -219,11 +199,8 @@ impl Piece for Rook {
             let positive_rank = pos.rank + i;
             //?u8 was panicing because it went lower than 0 when subtracting
             //?temporary fix with i8 conversion
-            if positive_rank <= rank_bound_max {
-                let p = Position {
-                    file: pos.file,
-                    rank: positive_rank,
-                };
+            if positive_rank <= RANK_BOUND_MAX {
+                let p = Position::new(pos.file, positive_rank);
                 if db.is_piece_in_position_of_same_color(&p, &self.color, lock) {
                     break;
                 }
@@ -232,11 +209,8 @@ impl Piece for Rook {
         }
         for i in 1..=range {
             let negative_rank: i8 = (pos.rank as i8) - i as i8;
-            if negative_rank >= rank_bound_min {
-                let p = Position {
-                    file: pos.file,
-                    rank: negative_rank as u8,
-                };
+            if negative_rank >= RANK_BOUND_MIN as i8 {
+                let p = Position::new(pos.file, negative_rank as u8);
                 if db.is_piece_in_position_of_same_color(&p, &self.color, lock) {
                     break;
                 }
@@ -272,6 +246,9 @@ impl Piece for Knight {
     fn get_color(&self) -> Color {
         self.color.clone()
     }
+    fn set_color(&mut self, color: Color) {
+        self.color = color;
+    }
     fn get_moves<'a>(
         &mut self,
         pos: &Position,
@@ -279,9 +256,6 @@ impl Piece for Knight {
         lock: &'a MutexGuard<Matrix>,
     ) -> Vec<Position> {
         let mut positions = Vec::new();
-        //todo CHANGE BOUND TO 8 AFTER INCLUDING OTHER PIECES
-        let rank_bound_max = 6;
-        let rank_bound_min: i8 = 1;
 
         let files = pos.file..='h';
         let mut files = files.skip(1);
@@ -292,63 +266,39 @@ impl Piece for Knight {
         let lowest_rank = pos.rank as i8 - 2 as i8;
 
         if let Some(positive_file) = files.next() {
-            if highest_rank <= rank_bound_max {
-                positions.push(Position {
-                    file: positive_file,
-                    rank: highest_rank,
-                });
+            if highest_rank <= RANK_BOUND_MAX {
+                positions.push(Position::new(positive_file, highest_rank));
             }
-            if lowest_rank >= rank_bound_min {
-                positions.push(Position {
-                    file: positive_file,
-                    rank: lowest_rank as u8,
-                });
+            if lowest_rank >= RANK_BOUND_MIN as i8 {
+                positions.push(Position::new(positive_file, lowest_rank as u8));
             }
         }
 
         if let Some(negative_file) = rev_files.next() {
-            if highest_rank <= rank_bound_max {
-                positions.push(Position {
-                    file: negative_file,
-                    rank: highest_rank,
-                });
+            if highest_rank <= RANK_BOUND_MAX {
+                positions.push(Position::new(negative_file, highest_rank));
             }
-            if lowest_rank >= rank_bound_min {
-                positions.push(Position {
-                    file: negative_file,
-                    rank: lowest_rank as u8,
-                });
+            if lowest_rank >= RANK_BOUND_MIN as i8 {
+                positions.push(Position::new(negative_file, lowest_rank as u8));
             }
         }
         let highest_rank = pos.rank + 1;
         let lowest_rank = pos.rank as i8 - 1;
         if let Some(highest_file) = files.next() {
-            if lowest_rank >= rank_bound_min {
-                positions.push(Position {
-                    file: highest_file,
-                    rank: lowest_rank as u8,
-                });
+            if lowest_rank >= RANK_BOUND_MIN as i8 {
+                positions.push(Position::new(highest_file, lowest_rank as u8));
             }
-            if highest_rank <= rank_bound_max {
-                positions.push(Position {
-                    file: highest_file,
-                    rank: highest_rank,
-                });
+            if highest_rank <= RANK_BOUND_MAX {
+                positions.push(Position::new(highest_file, highest_rank));
             }
         }
 
         if let Some(lowest_file) = rev_files.next() {
-            if lowest_rank >= rank_bound_min {
-                positions.push(Position {
-                    file: lowest_file,
-                    rank: lowest_rank as u8,
-                });
+            if lowest_rank >= RANK_BOUND_MIN as i8 {
+                positions.push(Position::new(lowest_file, lowest_rank as u8));
             }
-            if highest_rank <= rank_bound_max {
-                positions.push(Position {
-                    file: lowest_file,
-                    rank: highest_rank,
-                });
+            if highest_rank <= RANK_BOUND_MAX {
+                positions.push(Position::new(lowest_file, highest_rank));
             }
         }
 
@@ -381,6 +331,9 @@ impl Piece for Bishop {
     fn get_color(&self) -> Color {
         self.color.clone()
     }
+    fn set_color(&mut self, color: Color) {
+        self.color = color;
+    }
     fn get_moves<'a>(
         &mut self,
         pos: &Position,
@@ -393,9 +346,6 @@ impl Piece for Bishop {
         //? a5 & c5
 
         let mut positions: Vec<Position> = Vec::new();
-        //todo CHANGE BOUND TO 8 AFTER INCLUDING OTHER PIECES
-        let rank_bound_max = 6;
-        let rank_bound_min = 1;
 
         let files = pos.file..='h';
         let mut files = files.skip(1);
@@ -405,11 +355,8 @@ impl Piece for Bishop {
 
             match files.next() {
                 Some(positive_file) => {
-                    if negative_rank >= rank_bound_min {
-                        let p = Position {
-                            file: positive_file,
-                            rank: negative_rank as u8,
-                        };
+                    if negative_rank >= RANK_BOUND_MIN as i8 {
+                        let p = Position::new(positive_file, negative_rank as u8);
                         if db.is_piece_in_position_of_same_color(&p, &self.color, lock) {
                             break;
                         }
@@ -427,11 +374,8 @@ impl Piece for Bishop {
 
             match files2.next() {
                 Some(positive_file) => {
-                    if positive_rank <= rank_bound_max {
-                        let p = Position {
-                            file: positive_file,
-                            rank: positive_rank,
-                        };
+                    if positive_rank <= RANK_BOUND_MAX {
+                        let p = Position::new(positive_file, positive_rank);
                         if db.is_piece_in_position_of_same_color(&p, &self.color, lock) {
                             break;
                         }
@@ -449,11 +393,9 @@ impl Piece for Bishop {
             let positive_rank = pos.rank + i;
             match rev_files.next() {
                 Some(negative_file) => {
-                    if positive_rank <= rank_bound_max {
-                        let p = Position {
-                            file: negative_file,
-                            rank: positive_rank,
-                        };
+                    if positive_rank <= RANK_BOUND_MAX {
+                        let p = Position::new(negative_file, positive_rank);
+
                         if db.is_piece_in_position_of_same_color(&p, &self.color, lock) {
                             break;
                         }
@@ -471,11 +413,8 @@ impl Piece for Bishop {
             let negative_rank = pos.rank as i8 - i as i8;
             match rev_files2.next() {
                 Some(negative_file) => {
-                    if negative_rank >= rank_bound_min {
-                        let p = Position {
-                            file: negative_file,
-                            rank: negative_rank as u8,
-                        };
+                    if negative_rank >= RANK_BOUND_MIN as i8 {
+                        let p = Position::new(negative_file, negative_rank as u8);
                         if db.is_piece_in_position_of_same_color(&p, &self.color, lock) {
                             break;
                         }
@@ -511,6 +450,9 @@ impl Piece for Queen {
     fn get_color(&self) -> Color {
         self.color.clone()
     }
+    fn set_color(&mut self, color: Color) {
+        self.color = color;
+    }
     fn get_moves<'a>(
         &mut self,
         pos: &Position,
@@ -520,9 +462,6 @@ impl Piece for Queen {
         let range = self.range;
 
         let mut positions = Vec::new();
-        //todo CHANGE BOUND TO 8 AFTER INCLUDING OTHER PIECES
-        let rank_bound_max = 6;
-        let rank_bound_min = 1;
 
         let files = pos.file..='h';
         let mut files = files.skip(1);
@@ -536,28 +475,22 @@ impl Piece for Queen {
                 Some(positive_file) => {
                     let higher_rank = if i > pos.rank { 0 } else { pos.rank - i };
                     let lower_rank = pos.rank + i;
-                    let p_hor = Position {
-                        file: positive_file,
-                        rank: pos.rank,
-                    };
-                    let p_diag_top = Position {
-                        file: positive_file,
-                        rank: higher_rank,
-                    };
-                    let p_diag_bot = Position {
-                        file: positive_file,
-                        rank: lower_rank,
-                    };
+
+                    let p_hor = Position::new(positive_file, pos.rank);
+
+                    let p_diag_top = Position::new(positive_file, higher_rank);
+
+                    let p_diag_bot = Position::new(positive_file, lower_rank);
 
                     if db.is_piece_in_position_of_same_color(&p_hor, &self.color, lock) {
                         horizontal_right = false;
                     }
-                    if lower_rank <= rank_bound_max
+                    if lower_rank <= RANK_BOUND_MAX
                         && db.is_piece_in_position_of_same_color(&p_diag_bot, &self.color, lock)
                     {
                         diag_bot = false;
                     }
-                    if higher_rank >= rank_bound_min
+                    if higher_rank >= RANK_BOUND_MIN
                         && db.is_piece_in_position_of_same_color(&p_diag_top, &self.color, lock)
                     {
                         diag_top = false;
@@ -565,10 +498,10 @@ impl Piece for Queen {
                     if horizontal_right {
                         positions.push(p_hor);
                     }
-                    if diag_top && higher_rank >= rank_bound_min {
+                    if diag_top && higher_rank >= RANK_BOUND_MIN {
                         positions.push(p_diag_top);
                     }
-                    if diag_bot && lower_rank <= rank_bound_max {
+                    if diag_bot && lower_rank <= RANK_BOUND_MAX {
                         positions.push(p_diag_bot);
                     }
                 }
@@ -583,28 +516,19 @@ impl Piece for Queen {
 
             match rev_files.next() {
                 Some(negative_file) => {
-                    let p_hor = Position {
-                        file: negative_file,
-                        rank: pos.rank,
-                    };
-                    let p_diag_top = Position {
-                        file: negative_file,
-                        rank: higher_rank,
-                    };
-                    let p_diag_bot = Position {
-                        file: negative_file,
-                        rank: lower_rank,
-                    };
+                    let p_hor = Position::new(negative_file, pos.rank);
+                    let p_diag_top = Position::new(negative_file, higher_rank);
+                    let p_diag_bot = Position::new(negative_file, lower_rank);
 
                     if db.is_piece_in_position_of_same_color(&p_hor, &self.color, lock) {
                         horizontal_left = false;
                     }
-                    if lower_rank <= rank_bound_max
+                    if lower_rank <= RANK_BOUND_MAX
                         && db.is_piece_in_position_of_same_color(&p_diag_bot, &self.color, lock)
                     {
                         diag_bot = false;
                     }
-                    if higher_rank >= rank_bound_min
+                    if higher_rank >= RANK_BOUND_MIN
                         && db.is_piece_in_position_of_same_color(&p_diag_top, &self.color, lock)
                     {
                         diag_top = false;
@@ -612,10 +536,10 @@ impl Piece for Queen {
                     if horizontal_left {
                         positions.push(p_hor);
                     }
-                    if diag_top && higher_rank >= rank_bound_min {
+                    if diag_top && higher_rank >= RANK_BOUND_MIN {
                         positions.push(p_diag_top);
                     }
-                    if diag_bot && lower_rank <= rank_bound_max {
+                    if diag_bot && lower_rank <= RANK_BOUND_MAX {
                         positions.push(p_diag_bot);
                     }
                 }
@@ -627,11 +551,8 @@ impl Piece for Queen {
             let positive_rank = pos.rank + i;
             //?u8 was panicing because it went lower than 0 when subtracting
             //?temporary fix with i8 conversion
-            if positive_rank <= rank_bound_max {
-                let p = Position {
-                    file: pos.file,
-                    rank: positive_rank,
-                };
+            if positive_rank <= RANK_BOUND_MAX {
+                let p = Position::new(pos.file, positive_rank);
                 if db.is_piece_in_position_of_same_color(&p, &self.color, lock) {
                     break;
                 }
@@ -640,11 +561,9 @@ impl Piece for Queen {
         }
         for i in 1..=range {
             let negative_rank: i8 = (pos.rank as i8) - i as i8;
-            if negative_rank >= rank_bound_min as i8 {
-                let p = Position {
-                    file: pos.file,
-                    rank: negative_rank as u8,
-                };
+            if negative_rank >= RANK_BOUND_MIN as i8 {
+                let p = Position::new(pos.file, negative_rank as u8);
+
                 if db.is_piece_in_position_of_same_color(&p, &self.color, lock) {
                     break;
                 }
@@ -679,6 +598,9 @@ impl Piece for King {
     fn get_color(&self) -> Color {
         self.color.clone()
     }
+    fn set_color(&mut self, color: Color) {
+        self.color = color;
+    }
     fn get_moves<'a>(
         &mut self,
         pos: &Position,
@@ -690,68 +612,42 @@ impl Piece for King {
         let rev_files = 'a'..=pos.file;
         let mut rev_files = rev_files.rev().skip(1);
         let mut positions = Vec::new();
-        //todo CHANGE BOUNDS TO 8
-        let rank_bound_min = 1;
-        let rank_bound_max = 6;
-        let positive_rank = pos.rank + 1;
-        let negative_rank: i8 = (pos.rank as i8) - 1 as i8;
+
+        let positive_rank = pos.rank + self.range;
+        let negative_rank: i8 = (pos.rank as i8) - self.range as i8;
         if let Some(positive_file) = files.next() {
             let (p_hor, diag_top, diag_bot) = (
-                Position {
-                    file: positive_file,
-                    rank: pos.rank,
-                },
-                Position {
-                    file: positive_file,
-                    rank: negative_rank as u8,
-                },
-                Position {
-                    file: positive_file,
-                    rank: positive_rank,
-                },
+                Position::new(positive_file, pos.rank),
+                Position::new(positive_file, negative_rank as u8),
+                Position::new(positive_file, positive_rank),
             );
             positions.push(p_hor);
-            if positive_rank <= rank_bound_max {
+            if positive_rank <= RANK_BOUND_MAX {
                 positions.push(diag_bot);
             }
-            if negative_rank >= rank_bound_min {
+            if negative_rank >= RANK_BOUND_MIN as i8 {
                 positions.push(diag_top);
             }
         }
         if let Some(negative_file) = rev_files.next() {
             let (p_hor, diag_top, diag_bot) = (
-                Position {
-                    file: negative_file,
-                    rank: pos.rank,
-                },
-                Position {
-                    file: negative_file,
-                    rank: negative_rank as u8,
-                },
-                Position {
-                    file: negative_file,
-                    rank: positive_rank,
-                },
+                Position::new(negative_file, pos.rank),
+                Position::new(negative_file, negative_rank as u8),
+                Position::new(negative_file, positive_rank),
             );
             positions.push(p_hor);
-            if positive_rank <= rank_bound_max {
+            if positive_rank <= RANK_BOUND_MAX {
                 positions.push(diag_bot);
             }
-            if negative_rank >= rank_bound_min {
+            if negative_rank >= RANK_BOUND_MIN as i8 {
                 positions.push(diag_top);
             }
         }
-        if positive_rank <= rank_bound_max {
-            positions.push(Position {
-                file: pos.file,
-                rank: positive_rank,
-            })
+        if positive_rank <= RANK_BOUND_MAX {
+            positions.push(Position::new(pos.file, positive_rank));
         }
-        if negative_rank >= rank_bound_min {
-            positions.push(Position {
-                file: pos.file,
-                rank: negative_rank as u8,
-            })
+        if negative_rank >= RANK_BOUND_MIN as i8 {
+            positions.push(Position::new(pos.file, negative_rank as u8));
         }
 
         let positions = positions

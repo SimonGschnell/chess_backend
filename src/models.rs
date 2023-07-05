@@ -1,9 +1,7 @@
 use std::{
     borrow::BorrowMut,
-    cell::{Cell, Ref, RefCell},
-    error::Error,
+    cell::RefCell,
     fmt::Display,
-    ops::Add,
     str::FromStr,
     sync::{Arc, Mutex, MutexGuard},
 };
@@ -32,10 +30,7 @@ impl Position {
 
             _ => 'x',
         };
-        Position {
-            file,
-            rank: (row + 1) as u8,
-        }
+        Position::new(file, (row + 1) as u8)
     }
 }
 
@@ -51,7 +46,7 @@ impl FromStr for Position {
                 if let rank @ 49..=56 = r {
                     let file = char::from_u32(file).unwrap();
                     let rank = char::from_u32(rank).unwrap().to_digit(10).unwrap() as u8;
-                    return Ok(Position { file, rank });
+                    return Ok(Position::new(file, rank));
                 }
             }
         }
@@ -102,13 +97,12 @@ impl Board {
         lock: &'a MutexGuard<Matrix>,
     ) -> Option<Color> {
         let tile = self.get_tile(pos, &lock);
-        let mut res = None;
+
         if let Some(piece) = tile.borrow().piece.as_ref() {
-            res = Some(piece.get_color());
+            Some(piece.get_color())
         } else {
-            res = None;
+            None
         }
-        res
     }
 
     fn is_piece_in_position_of_same_color<'a>(
@@ -140,7 +134,7 @@ impl Board {
         let marked = self.show_moves_of_tile(pos);
         let lock = self.board.lock().unwrap();
         println!("  A B C D E F G H ");
-        for i in 0..=5 {
+        for i in 0..=7 {
             print!("{} ", i + 1);
             for j in 0..=7 {
                 let pos = Position::new_from_index(i, j);
@@ -187,27 +181,25 @@ fn convert_position_to_index(pos: &Position) -> (usize, usize) {
     (rank, file)
 }
 
-//todo please rewrite
 impl Display for Board {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut ranks = 1..9;
-        f.write_str("  ");
-        for file in 'A'..='H' {
-            f.write_str(&file.to_string().add(" "));
-        }
-        f.write_str("\n");
-        for row in &*self.board.lock().unwrap() {
-            let r = row
-                .iter()
-                .map(|item| item.borrow_mut().symbol())
-                .collect::<Vec<&str>>();
-            f.write_str(&ranks.next().unwrap().to_string().add(" "));
-            for i in &r {
-                f.write_str(i);
+        f.write_str("  A B C D E F G H\n")?;
+        for i in &*self
+            .board
+            .lock()
+            .unwrap()
+            .iter()
+            .enumerate()
+            .collect::<Vec<(usize, &Vec<RefCell<Tile>>)>>()
+        {
+            let mut rank = i.0.to_string();
+            rank.push(' ');
+            f.write_str(&rank)?;
+            for j in i.1 {
+                f.write_str(j.borrow().symbol())?
             }
-            f.write_str("\n");
+            f.write_str("\n")?
         }
-
         Ok(())
     }
 }
@@ -235,29 +227,54 @@ pub fn create_game() -> Board {
             tile
         })
         .collect();
-    let mut white_pawns: Vec<RefCell<Tile>> = black_start
+    let white_pawns: Vec<RefCell<Tile>> = black_start
         .clone()
         .into_iter()
         .map(|tile| {
             tile.borrow_mut()
-                .add_piece(GameObject::Rook(Rook::new(Color::White)));
+                .add_piece(GameObject::Pawn(Pawn::new(Color::White)));
             tile
         })
         .collect();
-    white_pawns[0] = Tile::new(
-        Some(GameObject::Queen(Queen::new(Color::White))),
-        Color::Black,
-    );
-    white_pawns[1] = Tile::new(
-        Some(GameObject::King(King::new(Color::White))),
-        Color::Black,
-    );
+    let mut pieces = [
+        GameObject::Rook(Rook::new(Color::White)),
+        GameObject::Knight(Knight::new(Color::White)),
+        GameObject::Bishop(Bishop::new(Color::White)),
+        GameObject::King(King::new(Color::White)),
+        GameObject::Queen(Queen::new(Color::White)),
+        GameObject::Bishop(Bishop::new(Color::White)),
+        GameObject::Knight(Knight::new(Color::White)),
+        GameObject::Rook(Rook::new(Color::White)),
+    ];
+    let white_pieces: Vec<RefCell<Tile>> = white_start
+        .clone()
+        .into_iter()
+        .enumerate()
+        .map(|(i, tile)| {
+            tile.borrow_mut().add_piece(pieces[i].to_owned());
+            tile
+        })
+        .collect();
+
+    let black_pieces: Vec<RefCell<Tile>> = black_start
+        .clone()
+        .into_iter()
+        .enumerate()
+        .map(|(i, tile)| {
+            pieces[i].set_color(Color::Black);
+            tile.borrow_mut().add_piece(pieces[i].to_owned());
+            tile
+        })
+        .collect();
+
+    rows.push(white_pieces);
     rows.push(white_pawns);
     rows.push(white_start.clone());
     rows.push(black_start.clone());
     rows.push(white_start.clone());
     rows.push(black_start.clone());
     rows.push(black_pawns);
+    rows.push(black_pieces);
     let rows = Arc::new(Mutex::new(rows));
 
     Board { board: rows }
@@ -272,6 +289,7 @@ trait Piece {
         lock: &'a MutexGuard<Matrix>,
     ) -> Vec<Position>;
     fn get_color(&self) -> Color;
+    fn set_color(&mut self, color: Color);
 }
 
 //fn symbol(&self) -> &'static str;
@@ -319,6 +337,16 @@ impl Piece for GameObject {
             GameObject::Bishop(val) => val.get_color(),
             GameObject::Queen(val) => val.get_color(),
             GameObject::King(val) => val.get_color(),
+        }
+    }
+    fn set_color(&mut self, color: Color) {
+        match self {
+            GameObject::Pawn(val) => val.set_color(color),
+            GameObject::Rook(val) => val.set_color(color),
+            GameObject::Knight(val) => val.set_color(color),
+            GameObject::Bishop(val) => val.set_color(color),
+            GameObject::Queen(val) => val.set_color(color),
+            GameObject::King(val) => val.set_color(color),
         }
     }
 }
