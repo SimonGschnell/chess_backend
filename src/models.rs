@@ -63,13 +63,12 @@ pub struct Board {
 impl Board {
     pub fn move_piece(&self, start: &Position, end: &Position) -> Result<(), String> {
         let lock = self.board.lock().unwrap();
-        let moves = self
-            .get_tile(start, &lock)
-            .borrow_mut()
-            .piece
-            .as_mut()
-            .expect("No piece found in start position")
-            .get_moves(start, self, &lock);
+        let moves = match self.get_tile(start, &lock).borrow_mut().piece.as_mut() {
+            Some(val) => val.get_moves(start, self, &lock),
+            None => {
+                return Err(format!("There is no piece at {:?}", start));
+            }
+        };
 
         if moves.contains(end) {
             let mut tile = self.get_tile(end, &lock).borrow_mut();
