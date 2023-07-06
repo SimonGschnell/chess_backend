@@ -27,12 +27,7 @@ impl Piece for Pawn {
         }
         chess_backend::WHITE_PAWN_SYMBOL
     }
-    fn get_moves<'a>(
-        &mut self,
-        pos: &Position,
-        db: &Board,
-        lock: &'a MutexGuard<Matrix>,
-    ) -> Vec<Position> {
+    fn get_moves(&mut self, pos: &Position, db: &Board) -> Vec<Position> {
         if self.did_move {
             self.range = 1;
         }
@@ -51,7 +46,7 @@ impl Piece for Pawn {
                     let rank = pos.rank - i;
                     if rank >= RANK_BOUND_MIN {
                         let p = Position::new(pos.file, rank);
-                        match db.is_piece_in_position(&p, lock) {
+                        match db.is_piece_in_position(&p) {
                             None => positions.push(p),
                             Some(_) => break,
                         }
@@ -62,7 +57,7 @@ impl Piece for Pawn {
                 if rank >= RANK_BOUND_MIN {
                     if let Some(positive_file) = files.next() {
                         let p = Position::new(positive_file, rank);
-                        if let Some(color) = db.is_piece_in_position(&p, lock) {
+                        if let Some(color) = db.is_piece_in_position(&p) {
                             if self.color != color {
                                 positions.push(p);
                             }
@@ -70,7 +65,7 @@ impl Piece for Pawn {
                     }
                     if let Some(negative_file) = rev_files.next() {
                         let p = Position::new(negative_file, rank);
-                        if let Some(color) = db.is_piece_in_position(&p, lock) {
+                        if let Some(color) = db.is_piece_in_position(&p) {
                             if self.color != color {
                                 positions.push(p);
                             }
@@ -83,7 +78,7 @@ impl Piece for Pawn {
                     let rank = pos.rank + i;
                     if rank <= RANK_BOUND_MAX {
                         let p = Position::new(pos.file, rank);
-                        match db.is_piece_in_position(&p, lock) {
+                        match db.is_piece_in_position(&p) {
                             None => positions.push(p),
                             Some(_) => break,
                         }
@@ -94,7 +89,7 @@ impl Piece for Pawn {
                 if rank <= RANK_BOUND_MAX {
                     if let Some(positive_file) = files.next() {
                         let p = Position::new(positive_file, rank);
-                        if let Some(color) = db.is_piece_in_position(&p, lock) {
+                        if let Some(color) = db.is_piece_in_position(&p) {
                             if self.color != color {
                                 positions.push(p);
                             }
@@ -102,7 +97,7 @@ impl Piece for Pawn {
                     }
                     if let Some(negative_file) = rev_files.next() {
                         let p = Position::new(negative_file, rank);
-                        if let Some(color) = db.is_piece_in_position(&p, lock) {
+                        if let Some(color) = db.is_piece_in_position(&p) {
                             if self.color != color {
                                 positions.push(p);
                             }
@@ -149,12 +144,7 @@ impl Piece for Rook {
         self.color = color;
     }
 
-    fn get_moves<'a>(
-        &mut self,
-        pos: &Position,
-        db: &Board,
-        lock: &'a MutexGuard<Matrix>,
-    ) -> Vec<Position> {
+    fn get_moves<'a>(&mut self, pos: &Position, db: &Board) -> Vec<Position> {
         let range = self.range;
         //*example orthogonals of b6
         //*diagonals if range =1 are
@@ -173,7 +163,7 @@ impl Piece for Rook {
                 Some(positive_file) => {
                     let p = Position::new(positive_file, pos.rank);
 
-                    if db.is_piece_in_position_of_same_color(&p, &self.color, lock) {
+                    if db.is_piece_in_position_of_same_color(&p, &self.color) {
                         break;
                     }
                     positions.push(p);
@@ -186,7 +176,7 @@ impl Piece for Rook {
                 Some(negative_file) => {
                     let p = Position::new(negative_file, pos.rank);
 
-                    if db.is_piece_in_position_of_same_color(&p, &self.color, lock) {
+                    if db.is_piece_in_position_of_same_color(&p, &self.color) {
                         break;
                     }
                     positions.push(p);
@@ -201,7 +191,7 @@ impl Piece for Rook {
             //?temporary fix with i8 conversion
             if positive_rank <= RANK_BOUND_MAX {
                 let p = Position::new(pos.file, positive_rank);
-                if db.is_piece_in_position_of_same_color(&p, &self.color, lock) {
+                if db.is_piece_in_position_of_same_color(&p, &self.color) {
                     break;
                 }
                 positions.push(p);
@@ -211,7 +201,7 @@ impl Piece for Rook {
             let negative_rank: i8 = (pos.rank as i8) - i as i8;
             if negative_rank >= RANK_BOUND_MIN as i8 {
                 let p = Position::new(pos.file, negative_rank as u8);
-                if db.is_piece_in_position_of_same_color(&p, &self.color, lock) {
+                if db.is_piece_in_position_of_same_color(&p, &self.color) {
                     break;
                 }
                 positions.push(p);
@@ -220,7 +210,7 @@ impl Piece for Rook {
 
         positions
             .into_iter()
-            .filter(|pos| !db.is_piece_in_position_of_same_color(pos, &self.color, lock))
+            .filter(|pos| !db.is_piece_in_position_of_same_color(pos, &self.color))
             .collect()
     }
 }
@@ -249,12 +239,7 @@ impl Piece for Knight {
     fn set_color(&mut self, color: Color) {
         self.color = color;
     }
-    fn get_moves<'a>(
-        &mut self,
-        pos: &Position,
-        db: &Board,
-        lock: &'a MutexGuard<Matrix>,
-    ) -> Vec<Position> {
+    fn get_moves<'a>(&mut self, pos: &Position, db: &Board) -> Vec<Position> {
         let mut positions = Vec::new();
 
         let files = pos.file..='h';
@@ -304,7 +289,7 @@ impl Piece for Knight {
 
         positions
             .into_iter()
-            .filter(|pos| !db.is_piece_in_position_of_same_color(&pos, &self.color, lock))
+            .filter(|pos| !db.is_piece_in_position_of_same_color(&pos, &self.color))
             .collect()
     }
 }
@@ -334,12 +319,7 @@ impl Piece for Bishop {
     fn set_color(&mut self, color: Color) {
         self.color = color;
     }
-    fn get_moves<'a>(
-        &mut self,
-        pos: &Position,
-        db: &Board,
-        lock: &'a MutexGuard<Matrix>,
-    ) -> Vec<Position> {
+    fn get_moves<'a>(&mut self, pos: &Position, db: &Board) -> Vec<Position> {
         let range = self.range;
         //*example diagonals of b6
         //*diagonals if range =1 are
@@ -357,7 +337,7 @@ impl Piece for Bishop {
                 Some(positive_file) => {
                     if negative_rank >= RANK_BOUND_MIN as i8 {
                         let p = Position::new(positive_file, negative_rank as u8);
-                        if db.is_piece_in_position_of_same_color(&p, &self.color, lock) {
+                        if db.is_piece_in_position_of_same_color(&p, &self.color) {
                             break;
                         }
                         positions.push(p);
@@ -376,7 +356,7 @@ impl Piece for Bishop {
                 Some(positive_file) => {
                     if positive_rank <= RANK_BOUND_MAX {
                         let p = Position::new(positive_file, positive_rank);
-                        if db.is_piece_in_position_of_same_color(&p, &self.color, lock) {
+                        if db.is_piece_in_position_of_same_color(&p, &self.color) {
                             break;
                         }
                         positions.push(p);
@@ -396,7 +376,7 @@ impl Piece for Bishop {
                     if positive_rank <= RANK_BOUND_MAX {
                         let p = Position::new(negative_file, positive_rank);
 
-                        if db.is_piece_in_position_of_same_color(&p, &self.color, lock) {
+                        if db.is_piece_in_position_of_same_color(&p, &self.color) {
                             break;
                         }
                         positions.push(p);
@@ -415,7 +395,7 @@ impl Piece for Bishop {
                 Some(negative_file) => {
                     if negative_rank >= RANK_BOUND_MIN as i8 {
                         let p = Position::new(negative_file, negative_rank as u8);
-                        if db.is_piece_in_position_of_same_color(&p, &self.color, lock) {
+                        if db.is_piece_in_position_of_same_color(&p, &self.color) {
                             break;
                         }
                         positions.push(p);
@@ -453,12 +433,7 @@ impl Piece for Queen {
     fn set_color(&mut self, color: Color) {
         self.color = color;
     }
-    fn get_moves<'a>(
-        &mut self,
-        pos: &Position,
-        db: &Board,
-        lock: &'a MutexGuard<Matrix>,
-    ) -> Vec<Position> {
+    fn get_moves<'a>(&mut self, pos: &Position, db: &Board) -> Vec<Position> {
         let range = self.range;
 
         let mut positions = Vec::new();
@@ -482,16 +457,16 @@ impl Piece for Queen {
 
                     let p_diag_bot = Position::new(positive_file, lower_rank);
 
-                    if db.is_piece_in_position_of_same_color(&p_hor, &self.color, lock) {
+                    if db.is_piece_in_position_of_same_color(&p_hor, &self.color) {
                         horizontal_right = false;
                     }
                     if lower_rank <= RANK_BOUND_MAX
-                        && db.is_piece_in_position_of_same_color(&p_diag_bot, &self.color, lock)
+                        && db.is_piece_in_position_of_same_color(&p_diag_bot, &self.color)
                     {
                         diag_bot = false;
                     }
                     if higher_rank >= RANK_BOUND_MIN
-                        && db.is_piece_in_position_of_same_color(&p_diag_top, &self.color, lock)
+                        && db.is_piece_in_position_of_same_color(&p_diag_top, &self.color)
                     {
                         diag_top = false;
                     }
@@ -520,16 +495,16 @@ impl Piece for Queen {
                     let p_diag_top = Position::new(negative_file, higher_rank);
                     let p_diag_bot = Position::new(negative_file, lower_rank);
 
-                    if db.is_piece_in_position_of_same_color(&p_hor, &self.color, lock) {
+                    if db.is_piece_in_position_of_same_color(&p_hor, &self.color) {
                         horizontal_left = false;
                     }
                     if lower_rank <= RANK_BOUND_MAX
-                        && db.is_piece_in_position_of_same_color(&p_diag_bot, &self.color, lock)
+                        && db.is_piece_in_position_of_same_color(&p_diag_bot, &self.color)
                     {
                         diag_bot = false;
                     }
                     if higher_rank >= RANK_BOUND_MIN
-                        && db.is_piece_in_position_of_same_color(&p_diag_top, &self.color, lock)
+                        && db.is_piece_in_position_of_same_color(&p_diag_top, &self.color)
                     {
                         diag_top = false;
                     }
@@ -553,7 +528,7 @@ impl Piece for Queen {
             //?temporary fix with i8 conversion
             if positive_rank <= RANK_BOUND_MAX {
                 let p = Position::new(pos.file, positive_rank);
-                if db.is_piece_in_position_of_same_color(&p, &self.color, lock) {
+                if db.is_piece_in_position_of_same_color(&p, &self.color) {
                     break;
                 }
                 positions.push(p);
@@ -564,7 +539,7 @@ impl Piece for Queen {
             if negative_rank >= RANK_BOUND_MIN as i8 {
                 let p = Position::new(pos.file, negative_rank as u8);
 
-                if db.is_piece_in_position_of_same_color(&p, &self.color, lock) {
+                if db.is_piece_in_position_of_same_color(&p, &self.color) {
                     break;
                 }
                 positions.push(p);
@@ -573,7 +548,7 @@ impl Piece for Queen {
 
         positions
             .into_iter()
-            .filter(|pos| !db.is_piece_in_position_of_same_color(pos, &self.color, lock))
+            .filter(|pos| !db.is_piece_in_position_of_same_color(pos, &self.color))
             .collect()
     }
 }
@@ -601,12 +576,7 @@ impl Piece for King {
     fn set_color(&mut self, color: Color) {
         self.color = color;
     }
-    fn get_moves<'a>(
-        &mut self,
-        pos: &Position,
-        db: &Board,
-        lock: &'a MutexGuard<Matrix>,
-    ) -> Vec<Position> {
+    fn get_moves<'a>(&mut self, pos: &Position, db: &Board) -> Vec<Position> {
         let files = pos.file..='h';
         let mut files = files.skip(1);
         let rev_files = 'a'..=pos.file;
@@ -652,7 +622,7 @@ impl Piece for King {
 
         let positions = positions
             .into_iter()
-            .filter(|p| !db.is_piece_in_position_of_same_color(&p, &self.color, lock))
+            .filter(|p| !db.is_piece_in_position_of_same_color(&p, &self.color))
             .collect();
 
         positions

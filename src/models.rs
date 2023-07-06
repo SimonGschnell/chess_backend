@@ -6,7 +6,7 @@ use std::{
     sync::{Arc, Mutex, MutexGuard},
 };
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Serialize)]
 pub struct Position {
     file: char,
     rank: u8,
@@ -54,48 +54,57 @@ impl FromStr for Position {
         Err(())
     }
 }
+pub type Db = Arc<Mutex<Board>>;
 type Matrix = Vec<Vec<RefCell<Tile>>>;
 #[derive(Clone)]
 pub struct Board {
-    board: Arc<Mutex<Matrix>>,
+    board: Matrix,
+    players_turn: Color,
 }
 
 impl Board {
     pub fn move_piece(&self, start: &Position, end: &Position) -> Result<(), String> {
-        let lock = self.board.lock().unwrap();
-        let moves = match self.get_tile(start, &lock).borrow_mut().piece.as_mut() {
-            Some(val) => val.get_moves(start, self, &lock),
+        let moves = match self.get_tile(start).borrow_mut().piece.as_mut() {
+            Some(val) => val.get_moves(start, self),
             None => {
                 return Err(format!("There is no piece at {:?}", start));
             }
         };
 
         if moves.contains(end) {
-            let mut tile = self.get_tile(end, &lock).borrow_mut();
-            let mut piece = self
-                .get_tile(start, &lock)
-                .borrow_mut()
-                .piece
-                .take()
-                .unwrap();
+            let mut tile = self.get_tile(end).borrow_mut();
+            let mut piece = self.get_tile(start).borrow_mut().piece.take().unwrap();
 
             if let GameObject::Pawn(pawn) = &mut piece {
                 pawn.did_move = true;
             }
 
             tile.add_piece(piece);
+
             Ok(())
         } else {
             Err(String::from("illegal move, piece cant move there"))
         }
     }
 
-    fn is_piece_in_position<'a>(
-        &self,
-        pos: &Position,
-        lock: &'a MutexGuard<Matrix>,
-    ) -> Option<Color> {
-        let tile = self.get_tile(pos, &lock);
+    fn next_turn<'a>(&mut self) {
+        match self.players_turn {
+            Color::Black => {
+                self.players_turn = Color::White;
+            }
+            Color::White => {
+                self.players_turn = Color::Black;
+            }
+        }
+    }
+
+    fn is_check<'a>(&self, lock: &'a MutexGuard<Matrix>) -> () {
+        //todo return bool and finish implementation
+        //for i in lock {}
+    }
+
+    fn is_piece_in_position<'a>(&self, pos: &Position) -> Option<Color> {
+        let tile = self.get_tile(pos);
 
         if let Some(piece) = tile.borrow().piece.as_ref() {
             Some(piece.get_color())
@@ -104,13 +113,8 @@ impl Board {
         }
     }
 
-    fn is_piece_in_position_of_same_color<'a>(
-        &self,
-        pos: &Position,
-        color: &Color,
-        lock: &'a MutexGuard<Matrix>,
-    ) -> bool {
-        match self.is_piece_in_position(pos, lock) {
+    fn is_piece_in_position_of_same_color<'a>(&self, pos: &Position, color: &Color) -> bool {
+        match self.is_piece_in_position(pos) {
             Some(piece_color) => piece_color == color.clone(),
             None => false,
         }
@@ -118,11 +122,16 @@ impl Board {
 
     pub fn show_moves_of_tile(&self, pos: &Position) -> Vec<Position> {
         let (rank, file) = convert_position_to_index(&pos);
-        let lock = self.board.lock().unwrap();
 
-        let mut tile = lock.get(rank).unwrap().get(file).unwrap().borrow_mut();
+        let mut tile = self
+            .board
+            .get(rank)
+            .unwrap()
+            .get(file)
+            .unwrap()
+            .borrow_mut();
         match tile.piece.borrow_mut() {
-            Some(piece) => piece.get_moves(&pos, self, &lock),
+            Some(piece) => piece.get_moves(&pos, self),
             None => Vec::with_capacity(0),
         }
     }
@@ -131,30 +140,30 @@ impl Board {
         println!("{}-{}", pos.file, pos.rank);
 
         let marked = self.show_moves_of_tile(pos);
-        let lock = self.board.lock().unwrap();
+
         println!("  A B C D E F G H ");
         for i in 0..=7 {
             print!("{} ", i + 1);
             for j in 0..=7 {
                 let pos = Position::new_from_index(i, j);
                 if marked.contains(&pos) {
-                    if self.is_piece_in_position(&pos, &lock).is_some() {
+                    if self.is_piece_in_position(&pos).is_some() {
                         print!("🞩 ");
                     } else {
                         print!("🟢");
                     }
                 } else {
-                    print!("{}", self.get_tile(&pos, &lock).borrow().symbol());
+                    print!("{}", self.get_tile(&pos).borrow().symbol());
                 }
             }
             println!("");
         }
     }
 
-    fn get_tile<'a>(&self, pos: &Position, lock: &'a MutexGuard<Matrix>) -> &'a RefCell<Tile> {
+    fn get_tile(&self, pos: &Position) -> &RefCell<Tile> {
         let (rank, file) = convert_position_to_index(pos);
 
-        lock.get(rank).unwrap().get(file).unwrap()
+        self.board.get(rank).unwrap().get(file).unwrap()
     }
 }
 
@@ -185,13 +194,11 @@ impl Display for Board {
         f.write_str("  A B C D E F G H\n")?;
         for i in &*self
             .board
-            .lock()
-            .unwrap()
             .iter()
             .enumerate()
             .collect::<Vec<(usize, &Vec<RefCell<Tile>>)>>()
         {
-            let mut rank = i.0.to_string();
+            let mut rank = (i.0 + 1).to_string();
             rank.push(' ');
             f.write_str(&rank)?;
             for j in i.1 {
@@ -202,9 +209,8 @@ impl Display for Board {
         Ok(())
     }
 }
-pub fn create_game() -> Board {
+pub fn create_game() -> Arc<Mutex<Board>> {
     let mut rows = Vec::with_capacity(8);
-
     let mut black_start: Vec<RefCell<Tile>> = Vec::with_capacity(8);
     let mut white_start: Vec<RefCell<Tile>> = Vec::with_capacity(8);
 
@@ -274,19 +280,17 @@ pub fn create_game() -> Board {
     rows.push(black_start.clone());
     rows.push(black_pawns);
     rows.push(black_pieces);
-    let rows = Arc::new(Mutex::new(rows));
+    let rows = rows;
 
-    Board { board: rows }
+    Arc::new(Mutex::new(Board {
+        board: rows,
+        players_turn: Color::White,
+    }))
 }
 
 trait Piece {
     fn symbol(&self) -> &'static str;
-    fn get_moves<'a>(
-        &mut self,
-        pos: &Position,
-        db: &Board,
-        lock: &'a MutexGuard<Matrix>,
-    ) -> Vec<Position>;
+    fn get_moves<'a>(&mut self, pos: &Position, db: &Board) -> Vec<Position>;
     fn get_color(&self) -> Color;
     fn set_color(&mut self, color: Color);
 }
@@ -313,19 +317,14 @@ impl Piece for GameObject {
             GameObject::King(val) => val.symbol(),
         }
     }
-    fn get_moves<'a>(
-        &mut self,
-        pos: &Position,
-        db: &Board,
-        lock: &'a MutexGuard<Matrix>,
-    ) -> Vec<Position> {
+    fn get_moves<'a>(&mut self, pos: &Position, db: &Board) -> Vec<Position> {
         match self {
-            GameObject::Pawn(val) => val.get_moves(pos, db, lock),
-            GameObject::Rook(val) => val.get_moves(pos, db, lock),
-            GameObject::Knight(val) => val.get_moves(pos, db, lock),
-            GameObject::Bishop(val) => val.get_moves(pos, db, lock),
-            GameObject::Queen(val) => val.get_moves(pos, db, lock),
-            GameObject::King(val) => val.get_moves(pos, db, lock),
+            GameObject::Pawn(val) => val.get_moves(pos, db),
+            GameObject::Rook(val) => val.get_moves(pos, db),
+            GameObject::Knight(val) => val.get_moves(pos, db),
+            GameObject::Bishop(val) => val.get_moves(pos, db),
+            GameObject::Queen(val) => val.get_moves(pos, db),
+            GameObject::King(val) => val.get_moves(pos, db),
         }
     }
     fn get_color(&self) -> Color {
@@ -383,3 +382,4 @@ impl Tile {
 //? implementation of pieces
 mod pieces;
 use pieces::{Bishop, King, Knight, Pawn, Queen, Rook};
+use serde::Serialize;
