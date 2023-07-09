@@ -1,12 +1,13 @@
 use std::{
     borrow::BorrowMut,
     cell::RefCell,
+    collections::HashSet,
     fmt::Display,
     str::FromStr,
-    sync::{Arc, Mutex, MutexGuard},
+    sync::{Arc, Mutex},
 };
 
-#[derive(Debug, PartialEq, Clone, Serialize)]
+#[derive(Debug, PartialEq, Clone, Serialize, Eq, Hash)]
 pub struct Position {
     file: char,
     rank: u8,
@@ -63,13 +64,26 @@ pub struct Board {
 }
 
 impl Board {
-    pub fn move_piece(&self, start: &Position, end: &Position) -> Result<(), String> {
+    pub fn move_piece(&mut self, start: &Position, end: &Position) -> Result<(), String> {
+        let mut game_over = false;
         let moves = match self.get_tile(start).borrow_mut().piece.as_mut() {
             Some(val) => val.get_moves(start, self),
             None => {
                 return Err(format!("There is no piece at {:?}", start));
             }
         };
+
+        if self
+            .get_tile(start)
+            .borrow_mut()
+            .piece
+            .as_mut()
+            .unwrap()
+            .get_color()
+            != self.players_turn
+        {
+            return Err(format!("{:?} to play!", self.players_turn));
+        }
 
         if moves.contains(end) {
             let mut tile = self.get_tile(end).borrow_mut();
@@ -79,12 +93,26 @@ impl Board {
                 pawn.did_move = true;
             }
 
-            tile.add_piece(piece);
+            let taken_piece = tile.add_piece(piece);
 
-            Ok(())
+            if let Some(GameObject::King(_)) = taken_piece {
+                println!("CHECKMATEEEEEEEEE, {:?} WINS!", self.players_turn);
+                game_over = true;
+            }
         } else {
-            Err(String::from("illegal move, piece cant move there"))
+            return Err(String::from("illegal move, piece cant move there"));
         }
+        self.next_turn();
+        if game_over {
+            self.reset_board();
+        }
+        Ok(())
+    }
+
+    fn reset_board(&mut self) {
+        let clean_board = create_game();
+        self.board = clean_board.lock().unwrap().board.clone();
+        self.players_turn = Color::White;
     }
 
     fn next_turn<'a>(&mut self) {
@@ -98,9 +126,48 @@ impl Board {
         }
     }
 
-    fn is_check<'a>(&self, lock: &'a MutexGuard<Matrix>) -> () {
-        //todo return bool and finish implementation
-        //for i in lock {}
+    pub fn is_check(&self) -> bool {
+        let possible_takes = self.get_all_possible_takes();
+
+        /* for possible in possible_takes {
+            if let GameObject::King(_) = self
+                .get_tile(&possible)
+                .borrow_mut()
+                .piece
+                .as_ref()
+                .unwrap()
+            {
+                return true;
+            }
+        } */
+        false
+    }
+
+    fn get_all_possible_takes(&self) -> HashSet<Position> {
+        let mut possible_takes = HashSet::new();
+
+        for (row, i) in self
+            .board
+            .iter()
+            .enumerate()
+            .collect::<Vec<(usize, &Vec<RefCell<Tile>>)>>()
+        {
+            for (col, j) in i
+                .iter()
+                .enumerate()
+                .collect::<Vec<(usize, &RefCell<Tile>)>>()
+            {
+                if let Some(val) = j.borrow_mut().piece.as_mut() {
+                    println!("pos {:?}", &Position::new_from_index(row, col));
+                    for pos in val.get_moves(&Position::new_from_index(row, col), self) {
+                        if self.is_piece_in_position(&pos).is_some() {
+                            possible_takes.insert(pos);
+                        }
+                    }
+                }
+            }
+        }
+        possible_takes
     }
 
     fn is_piece_in_position<'a>(&self, pos: &Position) -> Option<Color> {
@@ -158,6 +225,7 @@ impl Board {
             }
             println!("");
         }
+        println!("{:?} to Move!", self.players_turn);
     }
 
     fn get_tile(&self, pos: &Position) -> &RefCell<Tile> {
@@ -192,12 +260,25 @@ fn convert_position_to_index(pos: &Position) -> (usize, usize) {
 impl Display for Board {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str("  A B C D E F G H\n")?;
-        for i in &*self
-            .board
-            .iter()
-            .enumerate()
-            .collect::<Vec<(usize, &Vec<RefCell<Tile>>)>>()
-        {
+
+        let board = match self.players_turn {
+            Color::Black => self
+                .board
+                .iter()
+                .enumerate()
+                .collect::<Vec<(usize, &Vec<RefCell<Tile>>)>>(),
+            Color::White => {
+                let mut b = self
+                    .board
+                    .iter()
+                    .enumerate()
+                    .collect::<Vec<(usize, &Vec<RefCell<Tile>>)>>();
+                b.reverse();
+                b
+            }
+        };
+
+        for i in board {
             let mut rank = (i.0 + 1).to_string();
             rank.push(' ');
             f.write_str(&rank)?;
@@ -206,9 +287,12 @@ impl Display for Board {
             }
             f.write_str("\n")?
         }
+        f.write_fmt(format_args!("{:?} to Move!", self.players_turn))?;
+
         Ok(())
     }
 }
+
 pub fn create_game() -> Arc<Mutex<Board>> {
     let mut rows = Vec::with_capacity(8);
     let mut black_start: Vec<RefCell<Tile>> = Vec::with_capacity(8);
@@ -374,8 +458,10 @@ impl Tile {
     fn new(piece: Option<GameObject>, color: Color) -> RefCell<Self> {
         RefCell::new(Tile { piece, color })
     }
-    fn add_piece(&mut self, piece: GameObject) {
+    fn add_piece(&mut self, piece: GameObject) -> Option<GameObject> {
+        let old = self.piece.clone();
         self.piece = Some(piece);
+        old
     }
 }
 

@@ -28,7 +28,12 @@ async fn main() {
 mod filters {
 
     use crate::models::{Db, Position};
-    use warp::{hyper::StatusCode, Filter};
+    use cookie::{time::Duration, Cookie};
+    use warp::{
+        hyper::StatusCode,
+        reply::{with_header, with_status},
+        Filter,
+    };
 
     pub fn chess_api(
         db: Db,
@@ -61,16 +66,40 @@ mod filters {
         warp::get().and(
             warp::path!("move" / Position / Position)
                 .and(with_db(db.clone()))
-                .map(|start: Position, end: Position, db: Db| {
-                    println!("start:{:?} - end:{:?} ", start, end);
+                .and(warp::header::optional("cookie"))
+                .map(
+                    |start: Position, end: Position, db: Db, user: Option<Cookie>| {
+                        println!("start:{:?} - end:{:?} ", start, end);
+                        if let Some(cook) = user {
+                            println!("{}", cook);
+                        }
+                        if let Err(error_message) = db.lock().unwrap().move_piece(&start, &end) {
+                            return with_status(
+                                with_header(error_message, "", ""),
+                                StatusCode::BAD_REQUEST,
+                            );
+                        }
+                        if db.lock().unwrap().is_check() {
+                            println!("CHECKKKKKKKKKKKKKKKKKKKKKKK")
+                        }
 
-                    if let Err(error_message) = db.lock().unwrap().move_piece(&start, &end) {
-                        return error_message;
-                    }
-
-                    println!("{}", db.lock().unwrap());
-                    format!("{:?} - {:?}\n{}", start, end, db.lock().unwrap())
-                }),
+                        //todo game could use cookies to store player_color on client
+                        //? if the game is designed as a console application, we can't use cookies
+                        let cooki = Cookie::build("user", "white")
+                            .path("/")
+                            .max_age(Duration::days(20))
+                            .finish();
+                        println!("{}", db.lock().unwrap());
+                        with_status(
+                            with_header(
+                                format!("{:?} - {:?}\n{}", start, end, db.lock().unwrap()),
+                                "Set-Cookie",
+                                cooki.to_string(),
+                            ),
+                            StatusCode::OK,
+                        )
+                    },
+                ),
         )
     }
 

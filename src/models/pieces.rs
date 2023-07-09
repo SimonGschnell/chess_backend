@@ -457,18 +457,31 @@ impl Piece for Queen {
 
                     let p_diag_bot = Position::new(positive_file, lower_rank);
 
-                    if db.is_piece_in_position_of_same_color(&p_hor, &self.color) {
+                    if let Some(col) = db.is_piece_in_position(&p_hor) {
+                        if horizontal_right && col != self.color {
+                            positions.push(p_hor.clone());
+                        }
+
                         horizontal_right = false;
                     }
-                    if lower_rank <= RANK_BOUND_MAX
-                        && db.is_piece_in_position_of_same_color(&p_diag_bot, &self.color)
-                    {
-                        diag_bot = false;
+                    if lower_rank <= RANK_BOUND_MAX {
+                        if let Some(col) = db.is_piece_in_position(&p_diag_bot) {
+                            if diag_bot && col != self.color {
+                                positions.push(p_diag_bot.clone());
+                            }
+
+                            diag_bot = false;
+                        }
                     }
-                    if higher_rank >= RANK_BOUND_MIN
-                        && db.is_piece_in_position_of_same_color(&p_diag_top, &self.color)
-                    {
-                        diag_top = false;
+
+                    if higher_rank >= RANK_BOUND_MIN {
+                        if let Some(col) = db.is_piece_in_position(&p_diag_top) {
+                            if diag_top && col != self.color {
+                                positions.push(p_diag_top.clone());
+                            }
+
+                            diag_top = false;
+                        }
                     }
                     if horizontal_right {
                         positions.push(p_hor);
@@ -495,18 +508,31 @@ impl Piece for Queen {
                     let p_diag_top = Position::new(negative_file, higher_rank);
                     let p_diag_bot = Position::new(negative_file, lower_rank);
 
-                    if db.is_piece_in_position_of_same_color(&p_hor, &self.color) {
+                    if let Some(col) = db.is_piece_in_position(&p_hor) {
+                        if horizontal_left && col != self.color {
+                            positions.push(p_hor.clone());
+                        }
+
                         horizontal_left = false;
                     }
-                    if lower_rank <= RANK_BOUND_MAX
-                        && db.is_piece_in_position_of_same_color(&p_diag_bot, &self.color)
-                    {
-                        diag_bot = false;
+
+                    if lower_rank <= RANK_BOUND_MAX {
+                        if let Some(col) = db.is_piece_in_position(&p_diag_bot) {
+                            if diag_bot && col != self.color {
+                                positions.push(p_diag_bot.clone());
+                            }
+
+                            diag_bot = false;
+                        }
                     }
-                    if higher_rank >= RANK_BOUND_MIN
-                        && db.is_piece_in_position_of_same_color(&p_diag_top, &self.color)
-                    {
-                        diag_top = false;
+                    if higher_rank >= RANK_BOUND_MIN {
+                        if let Some(col) = db.is_piece_in_position(&p_diag_top) {
+                            if diag_top && col != self.color {
+                                positions.push(p_diag_top.clone());
+                            }
+
+                            diag_top = false;
+                        }
                     }
                     if horizontal_left {
                         positions.push(p_hor);
@@ -528,7 +554,10 @@ impl Piece for Queen {
             //?temporary fix with i8 conversion
             if positive_rank <= RANK_BOUND_MAX {
                 let p = Position::new(pos.file, positive_rank);
-                if db.is_piece_in_position_of_same_color(&p, &self.color) {
+                if let Some(col) = db.is_piece_in_position(&p) {
+                    if col != self.color {
+                        positions.push(p);
+                    }
                     break;
                 }
                 positions.push(p);
@@ -539,7 +568,10 @@ impl Piece for Queen {
             if negative_rank >= RANK_BOUND_MIN as i8 {
                 let p = Position::new(pos.file, negative_rank as u8);
 
-                if db.is_piece_in_position_of_same_color(&p, &self.color) {
+                if let Some(col) = db.is_piece_in_position(&p) {
+                    if col != self.color {
+                        positions.push(p);
+                    }
                     break;
                 }
                 positions.push(p);
