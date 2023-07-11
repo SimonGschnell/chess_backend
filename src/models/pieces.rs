@@ -163,7 +163,10 @@ impl Piece for Rook {
                 Some(positive_file) => {
                     let p = Position::new(positive_file, pos.rank);
 
-                    if db.is_piece_in_position_of_same_color(&p, &self.color) {
+                    if let Some(col) = db.is_piece_in_position(&p) {
+                        if col != self.color {
+                            positions.push(p);
+                        }
                         break;
                     }
                     positions.push(p);
@@ -176,7 +179,10 @@ impl Piece for Rook {
                 Some(negative_file) => {
                     let p = Position::new(negative_file, pos.rank);
 
-                    if db.is_piece_in_position_of_same_color(&p, &self.color) {
+                    if let Some(col) = db.is_piece_in_position(&p) {
+                        if col != self.color {
+                            positions.push(p);
+                        }
                         break;
                     }
                     positions.push(p);
@@ -191,7 +197,10 @@ impl Piece for Rook {
             //?temporary fix with i8 conversion
             if positive_rank <= RANK_BOUND_MAX {
                 let p = Position::new(pos.file, positive_rank);
-                if db.is_piece_in_position_of_same_color(&p, &self.color) {
+                if let Some(col) = db.is_piece_in_position(&p) {
+                    if col != self.color {
+                        positions.push(p);
+                    }
                     break;
                 }
                 positions.push(p);
@@ -201,7 +210,10 @@ impl Piece for Rook {
             let negative_rank: i8 = (pos.rank as i8) - i as i8;
             if negative_rank >= RANK_BOUND_MIN as i8 {
                 let p = Position::new(pos.file, negative_rank as u8);
-                if db.is_piece_in_position_of_same_color(&p, &self.color) {
+                if let Some(col) = db.is_piece_in_position(&p) {
+                    if col != self.color {
+                        positions.push(p);
+                    }
                     break;
                 }
                 positions.push(p);
@@ -337,7 +349,10 @@ impl Piece for Bishop {
                 Some(positive_file) => {
                     if negative_rank >= RANK_BOUND_MIN as i8 {
                         let p = Position::new(positive_file, negative_rank as u8);
-                        if db.is_piece_in_position_of_same_color(&p, &self.color) {
+                        if let Some(col) = db.is_piece_in_position(&p) {
+                            if col != self.color {
+                                positions.push(p);
+                            }
                             break;
                         }
                         positions.push(p);
@@ -356,7 +371,10 @@ impl Piece for Bishop {
                 Some(positive_file) => {
                     if positive_rank <= RANK_BOUND_MAX {
                         let p = Position::new(positive_file, positive_rank);
-                        if db.is_piece_in_position_of_same_color(&p, &self.color) {
+                        if let Some(col) = db.is_piece_in_position(&p) {
+                            if col != self.color {
+                                positions.push(p);
+                            }
                             break;
                         }
                         positions.push(p);
@@ -376,7 +394,10 @@ impl Piece for Bishop {
                     if positive_rank <= RANK_BOUND_MAX {
                         let p = Position::new(negative_file, positive_rank);
 
-                        if db.is_piece_in_position_of_same_color(&p, &self.color) {
+                        if let Some(col) = db.is_piece_in_position(&p) {
+                            if col != self.color {
+                                positions.push(p);
+                            }
                             break;
                         }
                         positions.push(p);
@@ -395,7 +416,10 @@ impl Piece for Bishop {
                 Some(negative_file) => {
                     if negative_rank >= RANK_BOUND_MIN as i8 {
                         let p = Position::new(negative_file, negative_rank as u8);
-                        if db.is_piece_in_position_of_same_color(&p, &self.color) {
+                        if let Some(col) = db.is_piece_in_position(&p) {
+                            if col != self.color {
+                                positions.push(p);
+                            }
                             break;
                         }
                         positions.push(p);
