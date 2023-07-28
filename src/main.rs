@@ -21,7 +21,7 @@ async fn main() {
 
     //? serve
     warp::serve(route.with(warp::log("chess")))
-        .run(([127, 0, 0, 1], 3030))
+        .run(([0, 0, 0, 0], 3030))
         .await;
 }
 
@@ -51,7 +51,7 @@ mod filters {
     fn show_moves(
         db: Db,
     ) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
-        warp::get().and(warp::path!("show" / Position).and(with_db(db.clone())).map(
+        warp::get().and(warp::path!("show" / Position).and(with_db(db)).map(
             |pos: Position, db: Db| {
                 db.lock().unwrap().print_with_marked(&pos);
                 let positions = db.lock().unwrap().show_moves_of_tile(&pos);
@@ -65,7 +65,7 @@ mod filters {
     ) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
         warp::get().and(
             warp::path!("move" / Position / Position)
-                .and(with_db(db.clone()))
+                .and(with_db(db))
                 .and(warp::header::optional("cookie"))
                 .map(
                     |start: Position, end: Position, db: Db, user: Option<Cookie>| {
@@ -106,14 +106,10 @@ mod filters {
     fn print(
         db: Db,
     ) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
-        warp::get().and(
-            warp::path("print")
-                .and(with_db(db.clone()))
-                .map(|board: Db| {
-                    println!("{}", board.lock().unwrap());
-                    board.lock().unwrap().to_string()
-                }),
-        )
+        warp::get().and(warp::path("print").and(with_db(db)).map(|board: Db| {
+            println!("{}", board.lock().unwrap());
+            board.lock().unwrap().to_string()
+        }))
     }
 }
 

@@ -115,7 +115,7 @@ impl Board {
         self.players_turn = Color::White;
     }
 
-    fn next_turn<'a>(&mut self) {
+    fn next_turn(&mut self) {
         match self.players_turn {
             Color::Black => {
                 self.players_turn = Color::White;
@@ -129,7 +129,7 @@ impl Board {
     pub fn is_check(&self) -> bool {
         let possible_takes = self.get_all_possible_takes();
 
-        /* for possible in possible_takes {
+        for possible in possible_takes {
             if let GameObject::King(_) = self
                 .get_tile(&possible)
                 .borrow_mut()
@@ -139,7 +139,7 @@ impl Board {
             {
                 return true;
             }
-        } */
+        }
         false
     }
 
@@ -158,7 +158,6 @@ impl Board {
                 .collect::<Vec<(usize, &RefCell<Tile>)>>()
             {
                 if let Some(val) = j.borrow_mut().piece.as_mut() {
-                    println!("pos {:?}", &Position::new_from_index(row, col));
                     for pos in val.get_moves(&Position::new_from_index(row, col), self) {
                         if self.is_piece_in_position(&pos).is_some() {
                             possible_takes.insert(pos);
@@ -170,17 +169,13 @@ impl Board {
         possible_takes
     }
 
-    fn is_piece_in_position<'a>(&self, pos: &Position) -> Option<Color> {
+    fn is_piece_in_position(&self, pos: &Position) -> Option<Color> {
         let tile = self.get_tile(pos);
 
-        if let Some(piece) = tile.borrow().piece.as_ref() {
-            Some(piece.get_color())
-        } else {
-            None
-        }
+        tile.borrow().piece.as_ref().map(|piece| piece.get_color())
     }
 
-    fn is_piece_in_position_of_same_color<'a>(&self, pos: &Position, color: &Color) -> bool {
+    fn is_piece_in_position_of_same_color(&self, pos: &Position, color: &Color) -> bool {
         match self.is_piece_in_position(pos) {
             Some(piece_color) => piece_color == color.clone(),
             None => false,
@@ -188,7 +183,7 @@ impl Board {
     }
 
     pub fn show_moves_of_tile(&self, pos: &Position) -> Vec<Position> {
-        let (rank, file) = convert_position_to_index(&pos);
+        let (rank, file) = convert_position_to_index(pos);
 
         let mut tile = self
             .board
@@ -198,7 +193,7 @@ impl Board {
             .unwrap()
             .borrow_mut();
         match tile.piece.borrow_mut() {
-            Some(piece) => piece.get_moves(&pos, self),
+            Some(piece) => piece.get_moves(pos, self),
             None => Vec::with_capacity(0),
         }
     }
@@ -223,7 +218,7 @@ impl Board {
                     print!("{}", self.get_tile(&pos).borrow().symbol());
                 }
             }
-            println!("");
+            println!();
         }
         println!("{:?} to Move!", self.players_turn);
     }
@@ -374,7 +369,7 @@ pub fn create_game() -> Arc<Mutex<Board>> {
 
 trait Piece {
     fn symbol(&self) -> &'static str;
-    fn get_moves<'a>(&mut self, pos: &Position, db: &Board) -> Vec<Position>;
+    fn get_moves(&mut self, pos: &Position, db: &Board) -> Vec<Position>;
     fn get_color(&self) -> Color;
     fn set_color(&mut self, color: Color);
 }

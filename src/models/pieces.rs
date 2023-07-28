@@ -260,7 +260,7 @@ impl Piece for Knight {
         let mut rev_files = rev_files.rev().skip(1);
 
         let highest_rank = pos.rank + 2;
-        let lowest_rank = pos.rank as i8 - 2 as i8;
+        let lowest_rank = pos.rank as i8 - 2_i8;
 
         if let Some(positive_file) = files.next() {
             if highest_rank <= RANK_BOUND_MAX {
@@ -301,7 +301,7 @@ impl Piece for Knight {
 
         positions
             .into_iter()
-            .filter(|pos| !db.is_piece_in_position_of_same_color(&pos, &self.color))
+            .filter(|pos| !db.is_piece_in_position_of_same_color(pos, &self.color))
             .collect()
     }
 }
@@ -676,11 +676,9 @@ impl Piece for King {
             positions.push(Position::new(pos.file, negative_rank as u8));
         }
 
-        let positions = positions
-            .into_iter()
-            .filter(|p| !db.is_piece_in_position_of_same_color(&p, &self.color))
-            .collect();
-
         positions
+            .into_iter()
+            .filter(|p| !db.is_piece_in_position_of_same_color(p, &self.color))
+            .collect()
     }
 }
