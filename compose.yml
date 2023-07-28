@@ -1,0 +1,64 @@
+services:
+  chess_app:
+    
+    #* overrides the default CMD declared by the Dockerfile.
+    #command: ["echo", "world"]
+    #command: null => is ignored
+    #command: [] => empties Dockerfiles CMD
+
+    #* overrides the entrypoint
+    #entrypoint: /app/start.sh
+
+    #* specifies a custom container name for communication between other containers
+    container_name: chess_container
+
+    build:
+    #* build from Dockerfile
+      context: .
+      dockerfile: Dockerfile
+      #adds build arguments
+      args:
+        VERSION: alpine3.17
+
+    ports:
+    #* maps host port to container port
+     - "3030:3030"
+    
+    volumes:
+    #* sets volumes for the container
+      - my_volume:/code
+      #sets volume read-only
+      #read_only: true
+
+
+    environment: 
+    #* sets environment variables
+      TEST_ENV: test_env_value
+      ANOTHER: another_env
+
+    #* sets environment variables from a host file
+    env_file: .env
+    #multiple files
+    #env_file: [.env, .development.env]
+
+    #* alternative Dockerfile (if the context is not in the same directory)
+    #dockerfile:app/src/app.Dockerfile
+
+    #* define dockerfile inline in compose.yml
+    #dockerfile_inline: |
+    #  FROM baseimage
+    #  RUN some command
+
+    #* add configuration files to the service without the need to bind-mount configurations
+    #configs:
+    #- my_config
+    #- my_other_config
+
+volumes:
+  my_volume:
+
+#configs:
+#  my_config:
+#    file: ./my_config.txt
+#  my_other_config:
+#    external: true
