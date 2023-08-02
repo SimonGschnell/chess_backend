@@ -1,5 +1,7 @@
+mod db;
 mod models;
 // use log::{info, warn};
+use db::DB;
 use filters::chess_api;
 use models::Db;
 use warp::Filter;
@@ -12,6 +14,13 @@ async fn main() {
     }
     pretty_env_logger::init();
 
+    //? create connection to DB
+    let db_sql = DB::db_start().await;
+    let result = sqlx::query!("select * from piece_colors;")
+        .fetch_all(&db_sql.connection)
+        .await
+        .unwrap();
+    println!("{:?}", result);
     let db: Db = models::create_game();
     println!("{}", db.lock().unwrap());
     let route = chess_api(db);
