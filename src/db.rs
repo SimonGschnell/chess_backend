@@ -3,14 +3,27 @@ use sqlx::{migrate::MigrateDatabase, Pool, Sqlite, SqlitePool};
 const DB_URL: &str = "db/chess.db";
 
 pub struct DB {
-    pub connection: Pool<Sqlite>,
+    connection: Pool<Sqlite>,
 }
 
 impl DB {
     pub async fn db_start() -> Self {
         db_check().await;
         let connection = db_migrate().await;
+        let result = sqlx::query!("select * from piece_colors;")
+            .fetch_all(&connection)
+            .await
+            .unwrap();
+        println!("{:?}", result);
         DB { connection }
+    }
+
+    pub async fn query(&self) {
+        let stuff = sqlx::query!("SELECT * FROM piece_colors ")
+            .fetch_all(&self.connection)
+            .await
+            .unwrap();
+        println!("{:?}", stuff);
     }
 }
 
@@ -33,7 +46,7 @@ async fn db_check() {
 
 async fn db_migrate() -> Pool<Sqlite> {
     let connection = SqlitePool::connect(DB_URL).await.unwrap();
-    match sqlx::migrate!("db/migrations").run(&connection).await {
+    match sqlx::migrate!("./migrations").run(&connection).await {
         Err(err) => {
             panic!("{err}");
         }
