@@ -1,5 +1,5 @@
--- Add migration script here
-CREATE TABLE pieces (
+-- Add up migration script here
+CREATE TABLE IF NOT EXISTS pieces (
             color TEXT NOT NULL ,
             name TEXT NOT NULL ,
             symbol TEXT NOT NULL,

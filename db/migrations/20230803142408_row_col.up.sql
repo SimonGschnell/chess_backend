@@ -1,5 +1,5 @@
--- Add migration script here
-CREATE TABLE rows(
+-- Add up migration script here
+CREATE TABLE IF NOT EXISTS rows(
         row INTEGER NOT NULL PRIMARY KEY,
         CONSTRAINT row_range CHECK (row>0 AND row<9)
     );
@@ -14,7 +14,7 @@ CREATE TABLE rows(
     (7),
     (8);
 
-    CREATE TABLE cols (
+    CREATE TABLE IF NOT EXISTS cols (
         col TEXT PRIMARY KEY NOT NULL,
         CONSTRAINT row_range CHECK (col>='a' AND col<='h')
     );
