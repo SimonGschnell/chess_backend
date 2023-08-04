@@ -20,7 +20,7 @@ async fn main() {
 
     let db: Db = models::create_game();
     println!("{}", db.lock().unwrap());
-    let route = chess_api(db);
+    let route = chess_api(db, &db_sql);
 
     //? printing to board for debugging
     //db.print_with_marked(&Position::new_from_index(0, 0));

@@ -1,5 +1,7 @@
+use crate::db::DB as SqliteDB;
 use crate::models::{Db, Position};
 use cookie::{time::Duration, Cookie};
+use sqlx::{Pool, Sqlite};
 use warp::{
     hyper::StatusCode,
     reply::{with_header, with_status},
@@ -8,6 +10,7 @@ use warp::{
 
 pub fn chess_api(
     db: Db,
+    db_sqlite: &SqliteDB,
 ) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
     print(db.clone())
         .or(move_path(db.clone()))
