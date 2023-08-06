@@ -20,7 +20,7 @@ async fn main() {
 
     let db: Db = models::create_game();
     println!("{}", db.lock().unwrap());
-    let route = chess_api(db, &db_sql);
+    let route = chess_api(db);
 
     //? printing to board for debugging
     //db.print_with_marked(&Position::new_from_index(0, 0));
@@ -29,4 +29,5 @@ async fn main() {
     warp::serve(route.with(warp::log("chess")))
         .run(([0, 0, 0, 0], 3030))
         .await;
+    println!("hello");
 }

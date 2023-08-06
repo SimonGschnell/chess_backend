@@ -2,6 +2,7 @@ use sqlx::{migrate::MigrateDatabase, Pool, Sqlite, SqlitePool};
 
 const DB_URL: &str = "db/chess.db";
 
+#[derive(Clone)]
 pub struct DB {
     connection: Pool<Sqlite>,
 }

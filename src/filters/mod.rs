@@ -1,7 +1,6 @@
 use crate::db::DB as SqliteDB;
 use crate::models::{Db, Position};
 use cookie::{time::Duration, Cookie};
-use sqlx::{Pool, Sqlite};
 use warp::{
     hyper::StatusCode,
     reply::{with_header, with_status},
@@ -10,16 +9,20 @@ use warp::{
 
 pub fn chess_api(
     db: Db,
-    db_sqlite: &SqliteDB,
 ) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
     print(db.clone())
-        .or(move_path(db.clone()))
-        .or(show_moves(db))
+    //.or(move_path(db.clone())).or(show_moves(db))
 }
 
 //? including with database
 fn with_db(db: Db) -> impl Filter<Extract = (Db,), Error = std::convert::Infallible> + Clone {
     warp::any().map(move || db.clone())
+}
+
+fn with_db_sqlite(
+    db: &SqliteDB,
+) -> impl Filter<Extract = (&SqliteDB,), Error = std::convert::Infallible> + Clone {
+    warp::any().map(move || db)
 }
 
 fn show_moves(
@@ -84,4 +87,8 @@ fn print(db: Db) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rej
         println!("{}", board.lock().unwrap());
         board.lock().unwrap().to_string()
     }))
+    /* warp::get().and(warp::path("print").and(with_db(db)).map(|board: Db| {
+        println!("{}", board.lock().unwrap());
+        board.lock().unwrap().to_string()
+    })) */
 }
