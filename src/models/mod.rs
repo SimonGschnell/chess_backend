@@ -1,3 +1,7 @@
+use serde::Serialize;
+mod pieces;
+use pieces::{Bishop, King, Knight, Pawn, Queen, Rook};
+use sqlx::{sqlite::SqliteRow, FromRow, Row};
 use std::{
     borrow::BorrowMut,
     cell::RefCell,
@@ -6,6 +10,23 @@ use std::{
     str::FromStr,
     sync::{Arc, Mutex},
 };
+
+#[derive(Debug, Serialize)]
+pub struct printablePiece {
+    pub col: String,
+    pub row: i8,
+    pub symbol: String,
+}
+
+impl FromRow<'_, SqliteRow> for printablePiece {
+    fn from_row(r: &SqliteRow) -> Result<Self, sqlx::Error> {
+        Ok(Self {
+            col: r.try_get("col")?,
+            row: r.try_get("row")?,
+            symbol: r.try_get("symbol")?,
+        })
+    }
+}
 
 #[derive(Debug, PartialEq, Clone, Serialize, Eq, Hash)]
 pub struct Position {
@@ -55,6 +76,7 @@ impl FromStr for Position {
         Err(())
     }
 }
+
 pub type Db = Arc<Mutex<Board>>;
 type Matrix = Vec<Vec<RefCell<Tile>>>;
 #[derive(Clone)]
@@ -459,8 +481,3 @@ impl Tile {
         old
     }
 }
-
-//? implementation of pieces
-mod pieces;
-use pieces::{Bishop, King, Knight, Pawn, Queen, Rook};
-use serde::Serialize;
