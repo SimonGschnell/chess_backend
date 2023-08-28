@@ -21,7 +21,10 @@ CREATE TABLE IF NOT EXISTS pieces (
                 symbol='♕' AND color='BLACK' AND name='QUEEN' OR
                 symbol='♛' AND color='WHITE' AND name='QUEEN' OR
                 symbol='♔' AND color='BLACK' AND name='KING' OR
-                symbol='♚' AND color='WHITE' AND name='KING' 
+                symbol='♚' AND color='WHITE' AND name='KING' OR
+                symbol='⬛' AND color='WHITE' AND name='TILE' OR
+                symbol='⬜' AND color='BLACK' AND name='TILE' 
+                
             )
             );
 
@@ -37,4 +40,6 @@ CREATE TABLE IF NOT EXISTS pieces (
         ('BLACK', 'QUEEN','♕',8),  
         ('WHITE', 'QUEEN','♛',8),
         ('BLACK', 'KING','♔',1),  
-        ('WHITE', 'KING','♚',1);
+        ('WHITE', 'KING','♚',1),
+        ('WHITE', 'TILE','⬛',0),
+        ('BLACK', 'TILE','⬜',0);
