@@ -1,6 +1,7 @@
 mod db;
 //mod filters;
 mod models;
+use actix_cors::Cors;
 // use log::{info, warn};
 use actix_web::{web, App, HttpServer, Responder};
 use db::DB;
@@ -24,8 +25,17 @@ async fn main() -> std::io::Result<()> {
     // let route = chess_api(db);
 
     let data = web::Data::new(db_sql);
-    HttpServer::new(move || App::new().app_data(data.clone()).configure(routes::routes))
-        .bind(("0.0.0.0", 8080))?
-        .run()
-        .await
+    HttpServer::new(move || {
+        let cors = Cors::default()
+            .allowed_origin("http://localhost:5173")
+            .allow_any_method()
+            .allow_any_header();
+        App::new()
+            .wrap(cors)
+            .app_data(data.clone())
+            .configure(routes::routes)
+    })
+    .bind(("0.0.0.0", 8080))?
+    .run()
+    .await
 }
