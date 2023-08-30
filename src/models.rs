@@ -79,10 +79,10 @@ impl FromStr for Position {
 
 pub type Db = Arc<Mutex<Board>>;
 type Matrix = Vec<Vec<RefCell<Tile>>>;
-#[derive(Clone)]
+#[derive(Clone, Serialize)]
 pub struct Board {
-    board: Matrix,
-    players_turn: Color,
+    pub board: Matrix,
+    pub players_turn: Color,
 }
 
 impl Board {

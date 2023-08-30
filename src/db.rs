@@ -1,9 +1,10 @@
+use std::cell::{Ref, RefCell};
 use std::collections::HashMap;
 
 use sqlx::{migrate::MigrateDatabase, FromRow, Pool, Row, Sqlite, SqlitePool};
 
-use crate::models::{printablePiece, GameObject, Tile};
-
+use crate::models::{printablePiece, Board, Color, GameObject, Tile};
+type Matrix = Vec<Vec<RefCell<Tile>>>;
 const DB_URL: &str = "db/chess.db";
 
 #[derive(Clone)]
@@ -44,17 +45,42 @@ impl DB {
         res
     }
 
-    pub async fn get_board(&self) -> Vec<Tile> {
-        let board_query = "select field_color,piece_color as color ,piece_name as name,range from board left join pieces ON (color,name)=(piece_color,piece_name);".replace("board", &self.board_name);
+    pub async fn get_board(&self) -> Board {
+        let chess_board_query = "select player_turn from chess_board where board_name =?;";
+        let player_turn = sqlx::query(chess_board_query)
+            .bind(&self.board_name)
+            .fetch_one(&self.connection)
+            .await
+            .unwrap();
+        let board_query = "select field_color,piece_color as color ,piece_name as name,range,row  from board left join pieces ON (color,name)=(piece_color,piece_name);".replace("board", &self.board_name);
         let pieces = sqlx::query(&board_query)
             .fetch_all(&self.connection)
             .await
             .unwrap();
-        let mut res = Vec::new();
-        for p in pieces {
-            res.push(Tile::from_row(&p).unwrap());
+        let player_turn = match player_turn.try_get("player_turn") {
+            Ok("WHITE") => Color::White,
+            Ok("BLACK") => Color::Black,
+            _ => panic!("Invalid player_turn_color"),
+        };
+        let mut res: Matrix = Vec::with_capacity(8);
+        for _ in 1..=8 {
+            res.push(Vec::with_capacity(8));
         }
-        res
+
+        pieces
+            .iter()
+            .for_each(|row| match row.try_get("row").unwrap() {
+                row_index @ 1..=8 => {
+                    let a: i32 = row_index;
+                    res[a as usize - 1].push(RefCell::new(Tile::from_row(row).unwrap()));
+                }
+                _ => panic!("Unexpected row"),
+            });
+
+        Board {
+            board: res,
+            players_turn: player_turn,
+        }
     }
 
     pub async fn query(&self) {
