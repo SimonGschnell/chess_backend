@@ -466,10 +466,31 @@ pub enum Color {
     Black,
 }
 
-#[derive(Clone)]
-struct Tile {
+#[derive(Clone, Serialize)]
+pub struct Tile {
     color: Color,
     piece: Option<GameObject>,
+}
+
+impl FromRow<'_, SqliteRow> for Tile {
+    fn from_row(row: &'_ SqliteRow) -> Result<Self, sqlx::Error> {
+        Ok(Tile {
+            color: match row.try_get("field_color")? {
+                "WHITE" => Color::White,
+                "BLACK" => Color::Black,
+                _ => panic!("not allowed field color"),
+            },
+            piece: match row.try_get("name")? {
+                "PAWN" => Some(GameObject::Pawn(Pawn::from_row(row)?)),
+                "ROOK" => Some(GameObject::Rook(Rook::from_row(row)?)),
+                "KNIGHT" => Some(GameObject::Knight(Knight::from_row(row)?)),
+                "BISHOP" => Some(GameObject::Bishop(Bishop::from_row(row)?)),
+                "QUEEN" => Some(GameObject::Queen(Queen::from_row(row)?)),
+                "KING" => Some(GameObject::King(King::from_row(row)?)),
+                _ => None,
+            },
+        })
+    }
 }
 
 impl Tile {

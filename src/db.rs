@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use sqlx::{migrate::MigrateDatabase, FromRow, Pool, Row, Sqlite, SqlitePool};
 
-use crate::models::{printablePiece, GameObject};
+use crate::models::{printablePiece, GameObject, Tile};
 
 const DB_URL: &str = "db/chess.db";
 
@@ -44,15 +44,15 @@ impl DB {
         res
     }
 
-    pub async fn get_board(&self) -> Vec<GameObject> {
-        let board_query = "select name,range,color from pieces;".replace("board", &self.board_name);
+    pub async fn get_board(&self) -> Vec<Tile> {
+        let board_query = "select field_color,piece_color as color ,piece_name as name,range from board left join pieces ON (color,name)=(piece_color,piece_name);".replace("board", &self.board_name);
         let pieces = sqlx::query(&board_query)
             .fetch_all(&self.connection)
             .await
             .unwrap();
         let mut res = Vec::new();
         for p in pieces {
-            res.push(GameObject::from_row(&p).unwrap());
+            res.push(Tile::from_row(&p).unwrap());
         }
         res
     }
