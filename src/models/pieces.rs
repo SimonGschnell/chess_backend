@@ -1,22 +1,17 @@
 use super::*;
-
+use serde::Serialize;
 const RANK_BOUND_MAX: u8 = 8;
 const RANK_BOUND_MIN: u8 = 1;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize)]
 pub struct Pawn {
-    pub did_move: bool,
     pub range: u8,
     pub color: Color,
 }
 
 impl Pawn {
     pub fn new(color: Color) -> Self {
-        Pawn {
-            did_move: false,
-            range: 2,
-            color,
-        }
+        Pawn { range: 2, color }
     }
 }
 
@@ -28,7 +23,16 @@ impl Piece for Pawn {
         chess_backend::WHITE_PAWN_SYMBOL
     }
     fn get_moves(&mut self, pos: &Position, db: &Board) -> Vec<Position> {
-        if self.did_move {
+        if ![
+            "a2", "b2", "c2", "d2", "e2", "f2", "g2", "h2", "a7", "b7", "c7", "d7", "e7", "f7",
+            "g7", "h7",
+        ]
+        .into_iter()
+        .map(|e| Position::from_str(e).unwrap())
+        .filter(|e| e == pos)
+        .count()
+            == 0
+        {
             self.range = 1;
         }
         let range = self.range;
@@ -117,7 +121,7 @@ impl Piece for Pawn {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize)]
 pub struct Rook {
     range: u8,
     color: Color,
@@ -227,14 +231,15 @@ impl Piece for Rook {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize)]
 pub struct Knight {
     color: Color,
+    range: u8,
 }
 
 impl Knight {
     pub fn new(color: Color) -> Self {
-        Knight { color }
+        Knight { color, range: 2 }
     }
 }
 impl Piece for Knight {
@@ -306,7 +311,7 @@ impl Piece for Knight {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize)]
 pub struct Bishop {
     color: Color,
     range: u8,
@@ -433,7 +438,7 @@ impl Piece for Bishop {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct Queen {
     range: u8,
     color: Color,
@@ -609,7 +614,7 @@ impl Piece for Queen {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct King {
     range: u8,
     color: Color,
@@ -680,5 +685,83 @@ impl Piece for King {
             .into_iter()
             .filter(|p| !db.is_piece_in_position_of_same_color(p, &self.color))
             .collect()
+    }
+}
+
+impl FromRow<'_, SqliteRow> for Pawn {
+    fn from_row(row: &'_ SqliteRow) -> Result<Self, sqlx::Error> {
+        Ok(Self {
+            range: row.get("range"),
+            color: match row.get("color") {
+                "WHITE" => Color::White,
+                "BLACK" => Color::Black,
+                _ => panic!("color must be either WHITE or BLACK"),
+            },
+        })
+    }
+}
+
+impl FromRow<'_, SqliteRow> for Rook {
+    fn from_row(row: &'_ SqliteRow) -> Result<Self, sqlx::Error> {
+        Ok(Self {
+            range: row.get("range"),
+            color: match row.get("color") {
+                "WHITE" => Color::White,
+                "BLACK" => Color::Black,
+                _ => panic!("color must be either WHITE or BLACK"),
+            },
+        })
+    }
+}
+
+impl FromRow<'_, SqliteRow> for Bishop {
+    fn from_row(row: &'_ SqliteRow) -> Result<Self, sqlx::Error> {
+        Ok(Self {
+            range: row.get("range"),
+            color: match row.get("color") {
+                "WHITE" => Color::White,
+                "BLACK" => Color::Black,
+                _ => panic!("color must be either WHITE or BLACK"),
+            },
+        })
+    }
+}
+
+impl FromRow<'_, SqliteRow> for Knight {
+    fn from_row(row: &'_ SqliteRow) -> Result<Self, sqlx::Error> {
+        Ok(Self {
+            range: row.get("range"),
+            color: match row.get("color") {
+                "WHITE" => Color::White,
+                "BLACK" => Color::Black,
+                _ => panic!("color must be either WHITE or BLACK"),
+            },
+        })
+    }
+}
+
+impl FromRow<'_, SqliteRow> for Queen {
+    fn from_row(row: &'_ SqliteRow) -> Result<Self, sqlx::Error> {
+        Ok(Self {
+            range: row.get("range"),
+            color: match row.get("color") {
+                "WHITE" => Color::White,
+                "BLACK" => Color::Black,
+                _ => panic!("color must be either WHITE or BLACK"),
+            },
+        })
+    }
+}
+
+impl FromRow<'_, SqliteRow> for King {
+    fn from_row(row: &'_ SqliteRow) -> Result<Self, sqlx::Error> {
+        Ok(Self {
+            range: row.get("range"),
+            color: match row.get("color") {
+                "WHITE" => Color::White,
+                "BLACK" => Color::Black,
+                _ => panic!("color must be either WHITE or BLACK"),
+            },
+        })
     }
 }
