@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use sqlx::{migrate::MigrateDatabase, FromRow, Pool, Row, Sqlite, SqlitePool};
 
-use crate::models::printablePiece;
+use crate::models::{printablePiece, GameObject};
 
 const DB_URL: &str = "db/chess.db";
 
@@ -15,11 +15,7 @@ pub struct DB {
 impl DB {
     pub async fn db_start() -> Self {
         let connection = db_migrate().await;
-        let result = sqlx::query!("select * from piece_colors;")
-            .fetch_all(&connection)
-            .await
-            .unwrap();
-        println!("{:?}", result);
+
         DB {
             connection,
             board_name: String::from("board"),
@@ -48,12 +44,25 @@ impl DB {
         res
     }
 
-    pub async fn query(&self) {
-        let stuff = sqlx::query!("SELECT * FROM piece_colors ")
+    pub async fn get_board(&self) -> Vec<GameObject> {
+        let board_query = "select name,range,color from pieces;".replace("board", &self.board_name);
+        let pieces = sqlx::query(&board_query)
             .fetch_all(&self.connection)
             .await
             .unwrap();
-        println!("{:?}", stuff);
+        let mut res = Vec::new();
+        for p in pieces {
+            res.push(GameObject::from_row(&p).unwrap());
+        }
+        res
+    }
+
+    pub async fn query(&self) {
+        /* let stuff = sqlx::query!("SELECT * FROM piece_colors ")
+            .fetch_all(&self.connection)
+            .await
+            .unwrap();
+        println!("{:?}", stuff); */
     }
 }
 
