@@ -25,7 +25,7 @@ impl DB {
 
     pub async fn print(&self) -> HashMap<i8, Vec<printablePiece>> {
         let board_query =
-            "select col,row,symbol from board join pieces on (color,name) = (piece_color,piece_name);"
+            "select col,row,symbol,field_color from board left join pieces on (color,name) = (piece_color,piece_name);"
                 .replace("board", &self.board_name);
         let board = sqlx::query(&board_query)
             .fetch_all(&self.connection)

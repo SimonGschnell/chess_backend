@@ -11,7 +11,7 @@ use std::str::FromStr;
 pub fn routes(config: &mut actix_web::web::ServiceConfig) {
     config.service(web::scope("/").route("", web::get().to(health_check)));
     config.service(web::scope("/test").route("", web::get().to(check_db_query)));
-    config.service(web::scope("/print").route("", web::get().to(print)));
+    config.service(web::scope("/board").route("", web::get().to(get_board)));
     config.service(web::scope("/move").route("/{from}/{to}", web::get().to(move_piece)));
 }
 
@@ -26,7 +26,7 @@ async fn check_db_query(data: web::Data<DB>) -> impl Responder {
     "success"
 }
 
-async fn print(data: web::Data<DB>) -> impl Responder {
+async fn get_board(data: web::Data<DB>) -> impl Responder {
     let pieces = data.into_inner().print().await;
     web::Json(pieces)
 }
@@ -40,10 +40,12 @@ struct MoveInfo {
 async fn move_piece(data: web::Data<DB>, moved: web::Path<MoveInfo>) -> impl Responder {
     let from = Position::from_str(&moved.from).expect("cannot transform into position");
     let to = Position::from_str(&moved.to).expect("cannot transform into position");
-    let board = data.into_inner().get_board().await;
-    println!("from : {:?}, to: {:?}", from, to);
-    //data.into_inner().move_piece(from, to).await;
+    //todo print from to -> println!("from : {:?}, to: {:?}", from, to);
+    //todo data.into_inner().move_piece(from, to).await;
+    "to be implemented"
+}
 
-    //let pieces = data.into_inner().print().await;
+async fn smth_else(data: web::Data<DB>) -> impl Responder {
+    let board = data.into_inner().get_board().await;
     web::Json(board)
 }

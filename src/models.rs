@@ -16,6 +16,7 @@ pub struct printablePiece {
     pub col: String,
     pub row: i8,
     pub symbol: String,
+    pub field_color: String,
 }
 
 impl FromRow<'_, SqliteRow> for printablePiece {
@@ -24,6 +25,7 @@ impl FromRow<'_, SqliteRow> for printablePiece {
             col: r.try_get("col")?,
             row: r.try_get("row")?,
             symbol: r.try_get("symbol")?,
+            field_color: r.try_get("field_color")?,
         })
     }
 }
