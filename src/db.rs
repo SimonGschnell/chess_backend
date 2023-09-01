@@ -3,7 +3,7 @@ use std::collections::HashMap;
 
 use sqlx::{migrate::MigrateDatabase, FromRow, Pool, Row, Sqlite, SqlitePool};
 
-use crate::models::{printablePiece, Board, Color, GameObject, Tile};
+use crate::models::{printablePiece, Board, Color, GameObject, Position, Tile};
 type Matrix = Vec<Vec<RefCell<Tile>>>;
 const DB_URL: &str = "db/chess.db";
 
@@ -81,6 +81,37 @@ impl DB {
             board: res,
             players_turn: player_turn,
         }
+    }
+
+    pub async fn move_piece(
+        &self,
+        from: Position,
+        to: Position,
+    ) -> std::result::Result<(), Box<dyn std::error::Error>> {
+        let from_piece = "select piece_color, piece_name from board where row =? and col =?";
+        let from_piece = sqlx::query(from_piece)
+            .bind(from.rank)
+            .bind(String::from(from.file))
+            .fetch_one(&self.connection)
+            .await?;
+        let from_piece_name: String = from_piece.try_get("piece_name")?;
+        let from_piece_color: String = from_piece.try_get("piece_color")?;
+        let empty_from_piece =
+            "update board set has_piece=0, piece_color =NULL, piece_name =NULL where row =? and col =?";
+        sqlx::query(empty_from_piece)
+            .bind(from.rank)
+            .bind(String::from(from.file))
+            .execute(&self.connection)
+            .await?;
+        let move_query = "update board set piece_color =?, piece_name =? where row =? and col =?";
+        sqlx::query(move_query)
+            .bind(from_piece_color)
+            .bind(from_piece_name)
+            .bind(to.rank)
+            .bind(String::from(to.file))
+            .execute(&self.connection)
+            .await?;
+        Ok(())
     }
 
     pub async fn query(&self) {

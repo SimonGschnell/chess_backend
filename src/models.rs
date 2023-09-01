@@ -32,8 +32,8 @@ impl FromRow<'_, SqliteRow> for printablePiece {
 
 #[derive(Debug, PartialEq, Clone, Serialize, Eq, Hash)]
 pub struct Position {
-    file: char,
-    rank: u8,
+    pub file: char,
+    pub rank: u8,
 }
 
 impl Position {
@@ -90,13 +90,6 @@ pub struct Board {
 impl Board {
     pub fn move_piece(&mut self, start: &Position, end: &Position) -> Result<(), String> {
         let mut game_over = false;
-        let moves = match self.get_tile(start).borrow_mut().piece.as_mut() {
-            Some(val) => val.get_moves(start, self),
-            None => {
-                return Err(format!("There is no piece at {:?}", start));
-            }
-        };
-
         if self
             .get_tile(start)
             .borrow_mut()
@@ -108,6 +101,12 @@ impl Board {
         {
             return Err(format!("{:?} to play!", self.players_turn));
         }
+        let moves = match self.get_tile(start).borrow_mut().piece.as_mut() {
+            Some(val) => val.get_moves(start, self),
+            None => {
+                return Err(format!("There is no piece at {:?}", start));
+            }
+        };
 
         if moves.contains(end) {
             let mut tile = self.get_tile(end).borrow_mut();

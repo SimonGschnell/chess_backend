@@ -1,16 +1,17 @@
 use super::db::DB;
 use super::models::Position;
 use actix_web::{
+    error::ResponseError,
     web::{self, Data, ServiceConfig},
     Responder,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use std::str::FromStr;
+use std::{fmt::Display, str::FromStr};
 
 pub fn routes(config: &mut actix_web::web::ServiceConfig) {
     config.service(web::scope("/").route("", web::get().to(health_check)));
-    config.service(web::scope("/test").route("", web::get().to(check_db_query)));
+
     config.service(web::scope("/board").route("", web::get().to(get_board)));
     config.service(web::scope("/move").route("/{from}/{to}", web::get().to(move_piece)));
 }
@@ -18,11 +19,6 @@ pub fn routes(config: &mut actix_web::web::ServiceConfig) {
 //? health check route
 
 async fn health_check() -> impl Responder {
-    "success"
-}
-
-async fn check_db_query(data: web::Data<DB>) -> impl Responder {
-    data.into_inner().query().await;
     "success"
 }
 
@@ -37,12 +33,37 @@ struct MoveInfo {
     to: String,
 }
 
-async fn move_piece(data: web::Data<DB>, moved: web::Path<MoveInfo>) -> impl Responder {
+#[derive(Debug, Serialize)]
+struct CustomError(String);
+
+impl Display for CustomError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl ResponseError for CustomError {
+    fn status_code(&self) -> actix_web::http::StatusCode {
+        actix_web::http::StatusCode::BAD_REQUEST
+    }
+    fn error_response(&self) -> actix_web::HttpResponse<actix_web::body::BoxBody> {
+        actix_web::HttpResponse::build(self.status_code()).json(self.to_string())
+    }
+}
+
+async fn move_piece(
+    data: web::Data<DB>,
+    moved: web::Path<MoveInfo>,
+) -> Result<impl Responder, CustomError> {
+    let db = data.into_inner();
+    let mut board = db.get_board().await;
     let from = Position::from_str(&moved.from).expect("cannot transform into position");
     let to = Position::from_str(&moved.to).expect("cannot transform into position");
-    //todo print from to -> println!("from : {:?}, to: {:?}", from, to);
-    //todo data.into_inner().move_piece(from, to).await;
-    "to be implemented"
+    board.move_piece(&from, &to).map_err(|e| CustomError(e))?;
+    db.move_piece(from, to)
+        .await
+        .map_err(|e| CustomError(e.to_string()))?;
+    Ok(web::Json("success"))
 }
 
 async fn smth_else(data: web::Data<DB>) -> impl Responder {
