@@ -66,7 +66,8 @@ async fn move_piece(
     Ok(web::Json("success"))
 }
 
-async fn smth_else(data: web::Data<DB>) -> impl Responder {
+async fn reset_board(data: web::Data<DB>) -> impl Responder {
+    //sqlx::query_file!()
     let board = data.into_inner().get_board().await;
     web::Json(board)
 }
