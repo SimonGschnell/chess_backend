@@ -17,6 +17,7 @@ pub struct printablePiece {
     pub row: i8,
     pub symbol: String,
     pub field_color: String,
+    pub piece_color: String,
 }
 
 impl FromRow<'_, SqliteRow> for printablePiece {
@@ -26,6 +27,7 @@ impl FromRow<'_, SqliteRow> for printablePiece {
             row: r.try_get("row")?,
             symbol: r.try_get("symbol")?,
             field_color: r.try_get("field_color")?,
+            piece_color: r.try_get("piece_color")?,
         })
     }
 }
@@ -469,28 +471,11 @@ pub enum Color {
 
 impl FromRow<'_, SqliteRow> for Color {
     fn from_row(row: &'_ SqliteRow) -> Result<Self, sqlx::Error> {
-        let color = row.try_get("color")?;
-        let field_color = row.try_get("field_color")?;
-        if color != "" {
-            Ok(match color {
-                "WHITE" => Color::White,
-                "BLACK" => Color::Black,
-                var => {
-                    println!("this color was not allowed: {:?}", var);
-                    panic!("color was not allowed {}", var);
-                }
-            })
-        } else if field_color != "" {
-            Ok(match field_color {
-                "WHITE" => Color::White,
-                "BLACK" => Color::Black,
-                var => panic!("color was not allowed {}", var),
-            })
-        } else {
-            Err(sqlx::Error::ColumnNotFound(String::from(
-                "column color not found",
-            )))
-        }
+        Ok(match row.try_get("color")? {
+            "WHITE" => Color::White,
+            "BLACK" => Color::Black,
+            var => panic!("type was not allowed {}", var),
+        })
     }
 }
 
@@ -503,7 +488,11 @@ pub struct Tile {
 impl FromRow<'_, SqliteRow> for Tile {
     fn from_row(row: &'_ SqliteRow) -> Result<Self, sqlx::Error> {
         Ok(Tile {
-            color: Color::from_row(row)?,
+            color: match row.try_get("field_color")? {
+                "WHITE" => Color::White,
+                "BLACK" => Color::Black,
+                var => panic!("color was not allowed {}", var),
+            },
             piece: match row.try_get("name")? {
                 "PAWN" => Some(GameObject::Pawn(Pawn::from_row(row)?)),
                 "ROOK" => Some(GameObject::Rook(Rook::from_row(row)?)),
