@@ -25,7 +25,7 @@ impl DB {
 
     pub async fn print(&self) -> HashMap<i8, Vec<printablePiece>> {
         let board_query =
-            "select col,row,symbol,field_color from board left join pieces on (color,name) = (piece_color,piece_name);"
+            "select col,row,symbol,field_color,piece_color from board left join pieces on (color,name) = (piece_color,piece_name);"
                 .replace("board", &self.board_name);
         let board = sqlx::query(&board_query)
             .fetch_all(&self.connection)
@@ -119,13 +119,13 @@ impl DB {
     pub async fn change_player_turn(&self) -> std::result::Result<(), Box<dyn std::error::Error>> {
         let player_turn = self.get_player_turn().await?;
         let new_player_turn = match player_turn {
-            Color::White => Color::Black,
-            Color::Black => Color::White,
+            Color::White => "BLACK",
+            Color::Black => "WHITE",
         };
         let change_player_turn_query = "update chess_board set player_turn =? where board_name =?";
 
         sqlx::query(change_player_turn_query)
-            .bind(sqlx::types::Json(new_player_turn)) //todo change this to color player_turn in json
+            .bind(new_player_turn) //todo change this to color player_turn in json
             .bind(&self.board_name)
             .execute(&self.connection)
             .await?;
@@ -133,7 +133,8 @@ impl DB {
     }
 
     pub async fn get_player_turn(&self) -> std::result::Result<Color, Box<dyn std::error::Error>> {
-        let get_player_turn_query = "select player_turn from chess_board where board_name =?;";
+        let get_player_turn_query =
+            "select player_turn as color from chess_board where board_name =?;";
         let player_turn = sqlx::query(get_player_turn_query)
             .bind(&self.board_name)
             .fetch_one(&self.connection)
