@@ -1,4 +1,4 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 mod pieces;
 use pieces::{Bishop, King, Knight, Pawn, Queen, Rook};
 use sqlx::{sqlite::SqliteRow, FromRow, Row};
@@ -461,10 +461,37 @@ impl Piece for GameObject {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum Color {
     White,
     Black,
+}
+
+impl FromRow<'_, SqliteRow> for Color {
+    fn from_row(row: &'_ SqliteRow) -> Result<Self, sqlx::Error> {
+        let color = row.try_get("color")?;
+        let field_color = row.try_get("field_color")?;
+        if color != "" {
+            Ok(match color {
+                "WHITE" => Color::White,
+                "BLACK" => Color::Black,
+                var => {
+                    println!("this color was not allowed: {:?}", var);
+                    panic!("color was not allowed {}", var);
+                }
+            })
+        } else if field_color != "" {
+            Ok(match field_color {
+                "WHITE" => Color::White,
+                "BLACK" => Color::Black,
+                var => panic!("color was not allowed {}", var),
+            })
+        } else {
+            Err(sqlx::Error::ColumnNotFound(String::from(
+                "column color not found",
+            )))
+        }
+    }
 }
 
 #[derive(Clone, Serialize)]
@@ -476,11 +503,7 @@ pub struct Tile {
 impl FromRow<'_, SqliteRow> for Tile {
     fn from_row(row: &'_ SqliteRow) -> Result<Self, sqlx::Error> {
         Ok(Tile {
-            color: match row.try_get("field_color")? {
-                "WHITE" => Color::White,
-                "BLACK" => Color::Black,
-                _ => panic!("not allowed field color"),
-            },
+            color: Color::from_row(row)?,
             piece: match row.try_get("name")? {
                 "PAWN" => Some(GameObject::Pawn(Pawn::from_row(row)?)),
                 "ROOK" => Some(GameObject::Rook(Rook::from_row(row)?)),
@@ -495,7 +518,7 @@ impl FromRow<'_, SqliteRow> for Tile {
 }
 
 impl Tile {
-    fn symbol(&self) -> &'static str {
+    pub fn symbol(&self) -> &'static str {
         if let Some(val) = &self.piece {
             return val.symbol();
         }

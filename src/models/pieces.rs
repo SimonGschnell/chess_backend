@@ -692,11 +692,7 @@ impl FromRow<'_, SqliteRow> for Pawn {
     fn from_row(row: &'_ SqliteRow) -> Result<Self, sqlx::Error> {
         Ok(Self {
             range: row.get("range"),
-            color: match row.get("color") {
-                "WHITE" => Color::White,
-                "BLACK" => Color::Black,
-                _ => panic!("color must be either WHITE or BLACK"),
-            },
+            color: Color::from_row(row)?,
         })
     }
 }
@@ -705,11 +701,7 @@ impl FromRow<'_, SqliteRow> for Rook {
     fn from_row(row: &'_ SqliteRow) -> Result<Self, sqlx::Error> {
         Ok(Self {
             range: row.get("range"),
-            color: match row.get("color") {
-                "WHITE" => Color::White,
-                "BLACK" => Color::Black,
-                _ => panic!("color must be either WHITE or BLACK"),
-            },
+            color: Color::from_row(row)?,
         })
     }
 }
@@ -718,11 +710,7 @@ impl FromRow<'_, SqliteRow> for Bishop {
     fn from_row(row: &'_ SqliteRow) -> Result<Self, sqlx::Error> {
         Ok(Self {
             range: row.get("range"),
-            color: match row.get("color") {
-                "WHITE" => Color::White,
-                "BLACK" => Color::Black,
-                _ => panic!("color must be either WHITE or BLACK"),
-            },
+            color: Color::from_row(row)?,
         })
     }
 }
@@ -731,11 +719,7 @@ impl FromRow<'_, SqliteRow> for Knight {
     fn from_row(row: &'_ SqliteRow) -> Result<Self, sqlx::Error> {
         Ok(Self {
             range: row.get("range"),
-            color: match row.get("color") {
-                "WHITE" => Color::White,
-                "BLACK" => Color::Black,
-                _ => panic!("color must be either WHITE or BLACK"),
-            },
+            color: Color::from_row(row)?,
         })
     }
 }
@@ -744,11 +728,7 @@ impl FromRow<'_, SqliteRow> for Queen {
     fn from_row(row: &'_ SqliteRow) -> Result<Self, sqlx::Error> {
         Ok(Self {
             range: row.get("range"),
-            color: match row.get("color") {
-                "WHITE" => Color::White,
-                "BLACK" => Color::Black,
-                _ => panic!("color must be either WHITE or BLACK"),
-            },
+            color: Color::from_row(row)?,
         })
     }
 }
@@ -757,11 +737,7 @@ impl FromRow<'_, SqliteRow> for King {
     fn from_row(row: &'_ SqliteRow) -> Result<Self, sqlx::Error> {
         Ok(Self {
             range: row.get("range"),
-            color: match row.get("color") {
-                "WHITE" => Color::White,
-                "BLACK" => Color::Black,
-                _ => panic!("color must be either WHITE or BLACK"),
-            },
+            color: Color::from_row(row)?,
         })
     }
 }
