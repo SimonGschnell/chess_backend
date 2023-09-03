@@ -1,9 +1,9 @@
 use std::cell::{Ref, RefCell};
 use std::collections::HashMap;
 
-use sqlx::{migrate::MigrateDatabase, FromRow, Pool, Row, Sqlite, SqlitePool};
-
 use crate::models::{printablePiece, Board, Color, GameObject, Position, Tile};
+use serde_json::Value;
+use sqlx::{migrate::MigrateDatabase, FromRow, Pool, Row, Sqlite, SqlitePool};
 type Matrix = Vec<Vec<RefCell<Tile>>>;
 const DB_URL: &str = "db/chess.db";
 
@@ -42,6 +42,7 @@ impl DB {
 
             res.get_mut(&piece.row).unwrap().push(piece);
         }
+
         res
     }
 
@@ -71,8 +72,7 @@ impl DB {
             .iter()
             .for_each(|row| match row.try_get("row").unwrap() {
                 row_index @ 1..=8 => {
-                    let a: i32 = row_index;
-                    res[a as usize - 1].push(RefCell::new(Tile::from_row(row).unwrap()));
+                    res[row_index as usize - 1].push(RefCell::new(Tile::from_row(row).unwrap()));
                 }
                 _ => panic!("Unexpected row"),
             });
@@ -111,15 +111,45 @@ impl DB {
             .bind(String::from(to.file))
             .execute(&self.connection)
             .await?;
+        self.change_player_turn().await?;
+
         Ok(())
     }
 
-    pub async fn query(&self) {
-        /* let stuff = sqlx::query!("SELECT * FROM piece_colors ")
-            .fetch_all(&self.connection)
-            .await
-            .unwrap();
-        println!("{:?}", stuff); */
+    pub async fn change_player_turn(&self) -> std::result::Result<(), Box<dyn std::error::Error>> {
+        let player_turn = self.get_player_turn().await?;
+        let new_player_turn = match player_turn {
+            Color::White => Color::Black,
+            Color::Black => Color::White,
+        };
+        let change_player_turn_query = "update chess_board set player_turn =? where board_name =?";
+
+        sqlx::query(change_player_turn_query)
+            .bind(sqlx::types::Json(new_player_turn)) //todo change this to color player_turn in json
+            .bind(&self.board_name)
+            .execute(&self.connection)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn get_player_turn(&self) -> std::result::Result<Color, Box<dyn std::error::Error>> {
+        let get_player_turn_query = "select player_turn from chess_board where board_name =?;";
+        let player_turn = sqlx::query(get_player_turn_query)
+            .bind(&self.board_name)
+            .fetch_one(&self.connection)
+            .await?;
+        let player_turn: Color = Color::from_row(&player_turn)?;
+        Ok(player_turn)
+    }
+
+    pub async fn reset(&self) -> Result<(), Box<dyn std::error::Error>> {
+        sqlx::query_file!("db/migrations/20230809135952_board.down.sql")
+            .execute(&self.connection)
+            .await?;
+        sqlx::query_file!("db/migrations/20230809135952_board.up.sql")
+            .execute(&self.connection)
+            .await?;
+        Ok(())
     }
 }
 

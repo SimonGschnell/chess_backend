@@ -7,13 +7,14 @@ use actix_web::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use std::{fmt::Display, str::FromStr};
+use std::{error::Error, fmt::Display, str::FromStr};
 
 pub fn routes(config: &mut actix_web::web::ServiceConfig) {
     config.service(web::scope("/").route("", web::get().to(health_check)));
 
     config.service(web::scope("/board").route("", web::get().to(get_board)));
     config.service(web::scope("/move").route("/{from}/{to}", web::get().to(move_piece)));
+    config.service(web::scope("/reset").route("", web::get().to(reset_board)));
 }
 
 //? health check route
@@ -66,8 +67,7 @@ async fn move_piece(
     Ok(web::Json("success"))
 }
 
-async fn reset_board(data: web::Data<DB>) -> impl Responder {
-    //sqlx::query_file!()
-    let board = data.into_inner().get_board().await;
-    web::Json(board)
+async fn reset_board(data: web::Data<DB>) -> Result<impl Responder, Box<dyn Error>> {
+    data.into_inner().reset().await?;
+    Ok(web::Json("success"))
 }
