@@ -38,6 +38,18 @@ pub struct Position {
     pub rank: u8,
 }
 
+impl<'de> Deserialize<'de> for Position {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let data = String::deserialize(deserializer)?;
+        let pos = Position::from_str(&data).map_err(|e| serde::de::Error::custom(e.to_string()))?;
+
+        Ok(pos)
+    }
+}
+
 impl Position {
     pub fn new(file: char, rank: u8) -> Self {
         Position { file, rank }
@@ -61,7 +73,7 @@ impl Position {
 }
 
 impl FromStr for Position {
-    type Err = ();
+    type Err = String;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if s.len() == 2 {
             let s = s.to_lowercase();
@@ -77,7 +89,7 @@ impl FromStr for Position {
             }
         }
 
-        Err(())
+        Err(String::from("not able to deserialize Position"))
     }
 }
 
@@ -147,7 +159,7 @@ impl Board {
         }
     }
 
-    pub fn is_check(&self) -> bool {
+    pub fn is_check(&self) -> Option<Position> {
         let possible_takes = self.get_all_possible_takes();
 
         for possible in possible_takes {
@@ -158,10 +170,10 @@ impl Board {
                 .as_ref()
                 .unwrap()
             {
-                return true;
+                return Some(possible);
             }
         }
-        false
+        None
     }
 
     fn get_all_possible_takes(&self) -> HashSet<Position> {
