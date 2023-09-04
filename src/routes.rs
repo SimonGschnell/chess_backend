@@ -12,13 +12,18 @@ use std::{error::Error, fmt::Display, str::FromStr};
 pub fn routes(config: &mut actix_web::web::ServiceConfig) {
     config.service(web::scope("/").route("", web::get().to(health_check)));
 
-    config.service(web::scope("/board").route("", web::get().to(get_board)));
+    config.service(
+        web::scope("/board")
+            .route("", web::get().to(get_board))
+            .route("check", web::get().to(is_check))
+            .route("checkmate", web::get().to(checkmate))
+            .route("reset", web::get().to(reset_board)),
+    );
     config.service(web::scope("/move").route("/{from}/{to}", web::get().to(move_piece)));
     config.service(web::scope("/reset").route("", web::get().to(reset_board)));
 }
 
 //? health check route
-
 async fn health_check() -> impl Responder {
     "success"
 }
@@ -28,10 +33,33 @@ async fn get_board(data: web::Data<DB>) -> impl Responder {
     web::Json(pieces)
 }
 
-#[derive(Deserialize)]
-struct MoveInfo {
-    from: String,
-    to: String,
+#[derive(Serialize)]
+struct CheckResponse {
+    is_check: String,
+    pos: Option<Position>,
+}
+async fn is_check(data: web::Data<DB>) -> impl Responder {
+    let pos = data.into_inner().get_board().await.is_check();
+    let is_check = match pos.is_some() {
+        false => String::from("false"),
+        true => String::from("true"),
+    };
+    web::Json(CheckResponse { is_check, pos })
+}
+
+async fn checkmate(data: web::Data<DB>) -> Result<impl Responder, CustomError> {
+    if data
+        .into_inner()
+        .checkmate()
+        .await
+        .map_err(|e| CustomError(e.to_string()))?
+    {
+        Ok(web::Json(json!({
+            "is_checkmate": true
+        })))
+    } else {
+        Ok(web::Json(json!({"is_checkmate":false})))
+    }
 }
 
 #[derive(Debug, Serialize)]
@@ -54,16 +82,18 @@ impl ResponseError for CustomError {
 
 async fn move_piece(
     data: web::Data<DB>,
-    moved: web::Path<MoveInfo>,
+    moved: web::Path<(Position, Position)>,
 ) -> Result<impl Responder, CustomError> {
+    println!("{:?}", moved.as_ref());
     let db = data.into_inner();
     let mut board = db.get_board().await;
-    let from = Position::from_str(&moved.from).expect("cannot transform into position");
-    let to = Position::from_str(&moved.to).expect("cannot transform into position");
+    let (from, to) = moved.into_inner();
+
     board.move_piece(&from, &to).map_err(|e| CustomError(e))?;
     db.move_piece(from, to)
         .await
         .map_err(|e| CustomError(e.to_string()))?;
+
     Ok(web::Json("success"))
 }
 

@@ -1,8 +1,7 @@
-use std::cell::{Ref, RefCell};
+use std::cell::RefCell;
 use std::collections::HashMap;
 
 use crate::models::{printablePiece, Board, Color, GameObject, Position, Tile};
-use serde_json::Value;
 use sqlx::{migrate::MigrateDatabase, FromRow, Pool, Row, Sqlite, SqlitePool};
 type Matrix = Vec<Vec<RefCell<Tile>>>;
 const DB_URL: &str = "db/chess.db";
@@ -125,7 +124,7 @@ impl DB {
         let change_player_turn_query = "update chess_board set player_turn =? where board_name =?";
 
         sqlx::query(change_player_turn_query)
-            .bind(new_player_turn) //todo change this to color player_turn in json
+            .bind(new_player_turn)
             .bind(&self.board_name)
             .execute(&self.connection)
             .await?;
@@ -150,7 +149,24 @@ impl DB {
         sqlx::query_file!("db/migrations/20230809135952_board.up.sql")
             .execute(&self.connection)
             .await?;
+        sqlx::query("UPDATE chess_board SET player_turn = 'WHITE' WHERE board_name = ?;")
+            .bind(&self.board_name)
+            .execute(&self.connection)
+            .await?;
         Ok(())
+    }
+
+    pub async fn checkmate(&self) -> Result<bool, Box<dyn std::error::Error>> {
+        let king_count =
+            sqlx::query("SELECT COUNT(piece_name) as kings FROM board WHERE piece_name = 'KING';")
+                .fetch_one(&self.connection)
+                .await?;
+        let king_count: i64 = king_count.try_get("kings")?;
+        if king_count < 2 {
+            Ok(true)
+        } else {
+            Ok(false)
+        }
     }
 }
 
