@@ -38,6 +38,12 @@ pub struct Position {
     pub rank: u8,
 }
 
+impl Display for Position {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}{}", self.file, self.rank)
+    }
+}
+
 impl<'de> Deserialize<'de> for Position {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where

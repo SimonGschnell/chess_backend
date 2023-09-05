@@ -19,7 +19,12 @@ pub fn routes(config: &mut actix_web::web::ServiceConfig) {
             .route("checkmate", web::get().to(checkmate))
             .route("reset", web::get().to(reset_board)),
     );
-    config.service(web::scope("/move").route("/{from}/{to}", web::get().to(move_piece)));
+    config.service(
+        web::scope("/move")
+            //? the order of these routes matter because the second could consume the first
+            .route("/show/{position}", web::get().to(show_move))
+            .route("/{from}/{to}", web::get().to(move_piece)),
+    );
     config.service(web::scope("/reset").route("", web::get().to(reset_board)));
 }
 
@@ -84,7 +89,6 @@ async fn move_piece(
     data: web::Data<DB>,
     moved: web::Path<(Position, Position)>,
 ) -> Result<impl Responder, CustomError> {
-    println!("{:?}", moved.as_ref());
     let db = data.into_inner();
     let mut board = db.get_board().await;
     let (from, to) = moved.into_inner();
@@ -95,6 +99,22 @@ async fn move_piece(
         .map_err(|e| CustomError(e.to_string()))?;
 
     Ok(web::Json("success"))
+}
+
+async fn show_move(
+    data: web::Data<DB>,
+    pos: web::Path<Position>,
+) -> Result<impl Responder, CustomError> {
+    let db = data.into_inner();
+    let board = db.get_board().await;
+    let pos = pos.into_inner();
+    let moves = board.show_moves_of_tile(&pos);
+    let moves = moves
+        .iter()
+        .map(|pos| pos.to_string())
+        .collect::<Vec<String>>();
+
+    Ok(web::Json(moves))
 }
 
 async fn reset_board(data: web::Data<DB>) -> Result<impl Responder, Box<dyn Error>> {
