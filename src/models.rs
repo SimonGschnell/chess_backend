@@ -127,7 +127,7 @@ impl Board {
                 return Err(format!("There is no piece at {:?}", start));
             }
         };
-
+        let before_move_check = self.is_check().is_some();
         if moves.contains(end) {
             let mut tile = self.get_tile(end).borrow_mut();
             let piece = self.get_tile(start).borrow_mut().piece.take().unwrap();
@@ -140,6 +140,9 @@ impl Board {
             }
         } else {
             return Err(String::from("illegal move, piece cant move there"));
+        }
+        if before_move_check && self.is_check().is_some() {
+            return Err(format!("it's still check"));
         }
         self.next_turn();
         if game_over {
@@ -182,6 +185,14 @@ impl Board {
         None
     }
 
+    //todo: implement
+    fn check_for_checkmate(&self, color: Color) {}
+
+    fn is_still_check(&self, from: &Position, to: &Position) -> bool {
+        let mut copy = self.clone();
+        copy.move_piece(from, to);
+        copy.is_check().is_some()
+    }
     fn get_all_possible_takes(&self) -> HashSet<Position> {
         let mut possible_takes = HashSet::new();
 
