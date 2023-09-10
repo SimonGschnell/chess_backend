@@ -34,8 +34,10 @@ async fn health_check() -> impl Responder {
 }
 
 async fn get_board(data: web::Data<DB>) -> impl Responder {
-    let pieces = data.into_inner().print().await;
-    web::Json(pieces)
+    let data = data.into_inner();
+    let pieces = data.print().await;
+    let player_turn = data.get_player_turn().await.unwrap();
+    web::Json(json!({"player_turn":player_turn, "board":pieces}))
 }
 
 #[derive(Serialize)]
