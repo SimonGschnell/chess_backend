@@ -5,9 +5,9 @@ use actix_web::{
     web::{self, Data, ServiceConfig},
     Responder,
 };
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use serde_json::json;
-use std::{error::Error, fmt::Display, str::FromStr};
+use std::{error::Error, fmt::Display};
 
 pub fn routes(config: &mut actix_web::web::ServiceConfig) {
     config.service(web::scope("/").route("", web::get().to(health_check)));

@@ -1,8 +1,8 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
 
-use crate::models::{printablePiece, Board, Color, GameObject, Position, Tile};
-use sqlx::{migrate::MigrateDatabase, FromRow, Pool, Row, Sqlite, SqlitePool};
+use crate::models::{printablePiece, Board, Color, Position, Tile};
+use sqlx::{FromRow, Pool, Row, Sqlite, SqlitePool};
 type Matrix = Vec<Vec<RefCell<Tile>>>;
 const DB_URL: &str = "db/chess.db";
 

@@ -2,11 +2,8 @@ mod db;
 //mod filters;
 mod models;
 use actix_cors::Cors;
-// use log::{info, warn};
-use actix_web::{web, App, HttpServer, Responder};
+use actix_web::{web, App, HttpServer};
 use db::DB;
-//use filters::chess_api;
-use models::Db;
 mod routes;
 
 #[tokio::main]
