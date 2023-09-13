@@ -46,10 +46,7 @@ async fn is_check(data: web::Data<DB>) -> impl Responder {
         checkmate = true;
     }
     let pos = board.is_check();
-    let is_check = match pos.is_some() {
-        false => String::from("false"),
-        true => String::from("true"),
-    };
+    let is_check = pos.is_some();
     web::Json(json!({"is_check": is_check, "is_checkmate": checkmate, "pos": pos}))
 }
 
