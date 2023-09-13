@@ -16,7 +16,6 @@ pub fn routes(config: &mut actix_web::web::ServiceConfig) {
         web::scope("/board")
             .route("", web::get().to(get_board))
             .route("check", web::get().to(is_check))
-            .route("checkmate", web::get().to(checkmate))
             .route("reset", web::get().to(reset_board)),
     );
     config.service(
@@ -51,22 +50,7 @@ async fn is_check(data: web::Data<DB>) -> impl Responder {
         false => String::from("false"),
         true => String::from("true"),
     };
-    web::Json(CheckResponse { is_check, pos })
-}
-
-async fn checkmate(data: web::Data<DB>) -> Result<impl Responder, CustomError> {
-    if data
-        .into_inner()
-        .checkmate()
-        .await
-        .map_err(|e| CustomError(e.to_string()))?
-    {
-        Ok(web::Json(json!({
-            "is_checkmate": true
-        })))
-    } else {
-        Ok(web::Json(json!({"is_checkmate":false})))
-    }
+    web::Json(json!({"is_check": is_check, "pos": pos}))
 }
 
 #[derive(Debug, Serialize)]
@@ -96,6 +80,9 @@ async fn move_piece(
     let (from, to) = moved.into_inner();
 
     board.move_piece(&from, &to).map_err(|e| CustomError(e))?;
+    if board.check_for_checkmate(board.players_turn.clone()) {
+        return Err(CustomError(String::from("Checkmate")));
+    }
     db.move_piece(from, to)
         .await
         .map_err(|e| CustomError(e.to_string()))?;

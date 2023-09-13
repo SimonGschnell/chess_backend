@@ -155,19 +155,6 @@ impl DB {
             .await?;
         Ok(())
     }
-
-    pub async fn checkmate(&self) -> Result<bool, Box<dyn std::error::Error>> {
-        let king_count =
-            sqlx::query("SELECT COUNT(piece_name) as kings FROM board WHERE piece_name = 'KING';")
-                .fetch_one(&self.connection)
-                .await?;
-        let king_count: i64 = king_count.try_get("kings")?;
-        if king_count < 2 {
-            Ok(true)
-        } else {
-            Ok(false)
-        }
-    }
 }
 
 async fn db_migrate() -> Pool<Sqlite> {

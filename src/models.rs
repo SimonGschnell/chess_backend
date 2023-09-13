@@ -132,12 +132,14 @@ impl Board {
             let mut tile = self.get_tile(end).borrow_mut();
             let piece = self.get_tile(start).borrow_mut().piece.take().unwrap();
 
-            let taken_piece = tile.add_piece(piece);
+            //todo add_piece probably should not return anything
+            let _ = tile.add_piece(piece);
 
-            if let Some(GameObject::King(_)) = taken_piece {
+            //? this scenario should never happen
+            /* if let Some(GameObject::King(_)) = taken_piece {
                 println!("CHECKMATEEEEEEEEE, {:?} WINS!", self.players_turn);
                 game_over = true;
-            }
+            } */
         } else {
             return Err(String::from("illegal move, piece cant move there"));
         }
@@ -185,13 +187,49 @@ impl Board {
         None
     }
 
-    //todo: implement
-    fn check_for_checkmate(&self, color: Color) {}
+    pub fn check_for_checkmate(&self, color: Color) -> bool {
+        let mut res = true;
+        let mut board_clone = self.clone();
+        let original_version = self.clone();
 
-    fn is_still_check(&self, from: &Position, to: &Position) -> bool {
-        let mut copy = self.clone();
-        copy.move_piece(from, to);
-        copy.is_check().is_some()
+        for (row, i) in self
+            .board
+            .iter()
+            .enumerate()
+            .collect::<Vec<(usize, &Vec<RefCell<Tile>>)>>()
+        {
+            if res == false {
+                return res;
+            }
+            for (col, tile) in i
+                .iter()
+                .enumerate()
+                .collect::<Vec<(usize, &RefCell<Tile>)>>()
+            {
+                if let Some(p) = tile.borrow_mut().piece.as_mut() {
+                    if color == p.get_color() {
+                        let starting_position = &Position::new_from_index(row, col);
+
+                        let moves = p.get_moves(starting_position, &self);
+                        for m in moves {
+                            if Self::is_still_check(&mut board_clone, starting_position, &m)
+                                == false
+                            {
+                                res = false;
+                            }
+                            board_clone = original_version.clone();
+                        }
+                    }
+                }
+            }
+        }
+
+        res
+    }
+
+    fn is_still_check(board: &mut Board, from: &Position, to: &Position) -> bool {
+        let _ = board.move_piece(from, to);
+        board.is_check().is_some()
     }
     fn get_all_possible_takes(&self) -> HashSet<Position> {
         let mut possible_takes = HashSet::new();
@@ -505,6 +543,15 @@ impl FromRow<'_, SqliteRow> for Color {
             "BLACK" => Color::Black,
             var => panic!("type was not allowed {}", var),
         })
+    }
+}
+
+impl Color {
+    pub fn opposite_color(&self) -> Self {
+        match self {
+            Self::Black => Color::White,
+            Self::White => Color::Black,
+        }
     }
 }
 
