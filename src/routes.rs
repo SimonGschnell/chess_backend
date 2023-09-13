@@ -39,18 +39,18 @@ async fn get_board(data: web::Data<DB>) -> impl Responder {
     web::Json(json!({"player_turn":player_turn, "board":pieces}))
 }
 
-#[derive(Serialize)]
-struct CheckResponse {
-    is_check: String,
-    pos: Option<Position>,
-}
 async fn is_check(data: web::Data<DB>) -> impl Responder {
-    let pos = data.into_inner().get_board().await.is_check();
+    let board = data.into_inner().get_board().await;
+    let mut checkmate: bool = false;
+    if board.check_for_checkmate(board.players_turn.clone()) {
+        checkmate = true;
+    }
+    let pos = board.is_check();
     let is_check = match pos.is_some() {
         false => String::from("false"),
         true => String::from("true"),
     };
-    web::Json(json!({"is_check": is_check, "pos": pos}))
+    web::Json(json!({"is_check": is_check, "is_checkmate": checkmate, "pos": pos}))
 }
 
 #[derive(Debug, Serialize)]
@@ -80,12 +80,14 @@ async fn move_piece(
     let (from, to) = moved.into_inner();
 
     board.move_piece(&from, &to).map_err(|e| CustomError(e))?;
-    if board.check_for_checkmate(board.players_turn.clone()) {
-        return Err(CustomError(String::from("Checkmate")));
-    }
+
     db.move_piece(from, to)
         .await
         .map_err(|e| CustomError(e.to_string()))?;
+
+    if board.check_for_checkmate(board.players_turn.clone()) {
+        return Ok(web::Json("checkmate"));
+    }
 
     Ok(web::Json("success"))
 }
