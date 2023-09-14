@@ -82,10 +82,6 @@ async fn move_piece(
         .await
         .map_err(|e| CustomError(e.to_string()))?;
 
-    if board.check_for_checkmate(board.players_turn.clone()) {
-        return Ok(web::Json("checkmate"));
-    }
-
     Ok(web::Json("success"))
 }
 

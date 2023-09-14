@@ -4,7 +4,8 @@ use std::collections::HashMap;
 use crate::models::{printablePiece, Board, Color, Position, Tile};
 use sqlx::{FromRow, Pool, Row, Sqlite, SqlitePool};
 type Matrix = Vec<Vec<RefCell<Tile>>>;
-const DB_URL: &str = "db/chess.db";
+use sqlx::migrate::MigrateDatabase;
+const DB_URL: &str = "sqlite://db/chess.db";
 
 #[derive(Clone)]
 pub struct DB {
@@ -14,6 +15,25 @@ pub struct DB {
 
 impl DB {
     pub async fn db_start() -> Self {
+        // trigger recompilation when a new migration is added
+        println!("cargo:rerun-if-changed=migrations");
+
+        if !sqlx::Sqlite::database_exists(DB_URL).await.unwrap() {
+            println!("creating db at {DB_URL}");
+
+            match sqlx::Sqlite::create_database(DB_URL).await {
+                Err(err) => {
+                    panic!("{err}");
+                }
+                Ok(_) => {
+                    println!("successfull creation of the DB at {DB_URL}");
+                }
+            }
+            println!("{}", std::path::Path::new("db/chess.db").exists());
+        } else {
+            println!("db found");
+        }
+
         let connection = db_migrate().await;
 
         DB {
@@ -143,12 +163,11 @@ impl DB {
     }
 
     pub async fn reset(&self) -> Result<(), Box<dyn std::error::Error>> {
-        sqlx::query_file!("db/migrations/20230809135952_board.down.sql")
+        sqlx::query("DROP TABLE IF EXISTS board;")
             .execute(&self.connection)
             .await?;
-        sqlx::query_file!("db/migrations/20230809135952_board.up.sql")
-            .execute(&self.connection)
-            .await?;
+        let query = std::fs::read_to_string("db/migrations/20230809135952_board.up.sql").unwrap();
+        sqlx::query(&query).execute(&self.connection).await?;
         sqlx::query("UPDATE chess_board SET player_turn = 'WHITE' WHERE board_name = ?;")
             .bind(&self.board_name)
             .execute(&self.connection)
