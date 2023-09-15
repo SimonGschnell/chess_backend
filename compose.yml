@@ -22,7 +22,7 @@ services:
 
     ports:
     #* maps host port to container port
-     - "3030:3030"
+     - "8080:8080"
     
     volumes:
     #* sets volumes for the container
@@ -33,7 +33,7 @@ services:
 
     environment: 
     #* sets environment variables
-      TEST_ENV: test_env_value
+      DATABASE_URL: sqlite://db/chess.db
       ANOTHER: another_env
 
     #* sets environment variables from a host file
